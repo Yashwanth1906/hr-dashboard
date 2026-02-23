@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password      String
-  firstName     String
-  lastName      String
-  role          UserRole @default(EMPLOYEE)
-  avatar        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  role        UserRole  @default(EMPLOYEE)
+  avatar      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isOnBoarded Boolean   @default(false)
+  employee    Employee?
 
-  employee      Employee?
   @@map("users")
 }
 
@@ -29,10 +30,11 @@ model Team {
   createdAt   DateTime @default(now())
   productName String
 
-  managerId String
-  manager   Employee @relation("TeamManager", fields: [managerId], references: [id], onDelete: Cascade)
+  managers Employee[] @relation("TeamManagers")
 
   members Employee[] @relation("TeamMembers")
+
+  tasks Task[]
 }
 
 model JobRole {
@@ -51,35 +53,37 @@ model Department {
 }
 
 model Employee {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  jobRoleId     String   @map("role_id")
-  jobRole       JobRole  @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
+  jobRoleId String  @map("role_id")
+  jobRole   JobRole @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
 
-  departmentId  String
-  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
-  joinDate      DateTime
-  phone         String?
-  address       String?
+  joinDate DateTime
+  phone    String?
+  address  String?
 
   attendance    Attendance[]
-  tasks         Task[] @relation("AssignedTasks")
-  createdTasks  Task[] @relation("CreatedTasks")
+  tasks         Task[]       @relation("AssignedTasks")
+  createdTasks  Task[]       @relation("CreatedTasks")
+  reviewedTasks Task[]       @relation("ReviewedTasks")
+  testedTasks   Task[]       @relation("TestedTasks")
 
   certifications Certification[]
-  leaves         Leave[] @relation("EmployeeLeaves")
-  approvedLeaves Leave[] @relation("LeaveApprovals")
+  leaves         Leave[]         @relation("EmployeeLeaves")
+  approvedLeaves Leave[]         @relation("LeaveApprovals")
 
-  kpi            Float
-  attendanceRate Float
+  kpi            Float?
+  attendanceRate Float?
 
-  teamId String
-  team   Team @relation("TeamMembers", fields: [teamId], references: [id], onDelete: Cascade)
+  teamId String?
+  team   Team?   @relation("TeamMembers", fields: [teamId], references: [id], onDelete: Cascade)
 
-  managedTeams Team[] @relation("TeamManager")
+  managedTeams Team[] @relation("TeamManagers")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,7 +92,7 @@ model Employee {
 }
 
 model CompanyBranch {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   name      String
   latitude  Float
   longitude Float
@@ -97,24 +101,24 @@ model CompanyBranch {
 }
 
 model Attendance {
-  id             String   @id @default(uuid())
-  employeeId     String
-  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  date           DateTime
-  checkIn        DateTime?
-  checkOut       DateTime?
-  duration       Float?
-  isWFH          Boolean  @default(false)
+  date     DateTime
+  checkIn  DateTime?
+  checkOut DateTime?
+  duration Float?
+  isWFH    Boolean   @default(false)
 
   companyBranchId String
   companyBranch   CompanyBranch @relation(fields: [companyBranchId], references: [id], onDelete: Cascade)
 
-  isLate        Boolean @default(false)
-  isHalfDay     Boolean @default(false)
+  isLate    Boolean @default(false)
+  isHalfDay Boolean @default(false)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([employeeId, date])
   @@map("attendance")
@@ -127,28 +131,40 @@ model Tag {
 }
 
 model Task {
-  id          String      @id @default(uuid())
+  id          String  @id @default(uuid())
   title       String
   description String?
 
-  status      TaskStatus  @default(TODO)
-  priority    Priority    @default(MEDIUM)
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  assigneeId  String?
-  assignee    Employee?   @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
+  status   TaskStatus @default(TODO)
+  priority Priority   @default(MEDIUM)
+
+  assigneeId String?
+  assignee   Employee? @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
 
   createdById String
-  createdBy   Employee    @relation("CreatedTasks", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   Employee @relation("CreatedTasks", fields: [createdById], references: [id], onDelete: Cascade)
 
-  isApproved  Boolean     @default(false)
+  isApproved Boolean @default(false)
 
-  tags        Tag[]
+  tags Tag[]
 
   dueDate     DateTime?
   completedAt DateTime?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  githubUrl  String?
+  commitId   String?
+  feedback   String?
+  reviewerId String?
+  reviewer   Employee? @relation("ReviewedTasks", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  testerId   String?
+  tester     Employee? @relation("TestedTasks", fields: [testerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("tasks")
 }
@@ -164,31 +180,31 @@ model Certification {
   expiryDate DateTime?
   url        String?
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("certifications")
 }
 
 model Leave {
-  id           String   @id @default(uuid())
-  employeeId   String
-  employee     Employee @relation("EmployeeLeaves", fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation("EmployeeLeaves", fields: [employeeId], references: [id], onDelete: Cascade)
 
-  type         LeaveType
-  startDate    DateTime
-  endDate      DateTime
-  reason       String?
+  type      LeaveType
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
 
-  status       LeaveStatus @default(PENDING)
+  status LeaveStatus @default(PENDING)
 
   approvedById String?
   approvedBy   Employee? @relation("LeaveApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
 
-  approvedAt   DateTime?
+  approvedAt DateTime?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("leaves")
 }
@@ -204,8 +220,9 @@ enum TaskStatus {
   TODO
   ASSIGNED
   IN_PROGRESS
-  COMPLETED
+  REVIEW
   QA
+  COMPLETED
   CANCELLED
 }
 

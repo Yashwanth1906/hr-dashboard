@@ -6,15 +6,18 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 // Import routes
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
-import employeeRoutes from './routes/employees.js';
-import taskRoutes from './routes/tasks.js';
-import certificationRoutes from './routes/certifications.js';
-import leaveRoutes from './routes/leaves.js';
-import attendanceRoutes from './routes/attendance.js';
-import notificationRoutes from './routes/notifications.js';
-import analyticsRoutes from './routes/analytics.js';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import employeeRoutes from './routes/employees';
+import taskRoutes from './routes/tasks';
+import certificationRoutes from './routes/certifications';
+import leaveRoutes from './routes/leaves';
+import attendanceRoutes from './routes/attendance';
+import notificationRoutes from './routes/notifications';
+import analyticsRoutes from './routes/analytics';
+import jobRoutes from './routes/jobs';
+import departmentRoutes from './routes/department';
+import teamRoutes from './routes/team';
 
 const app = express();
 const PORT = process.env.PORT || 6969;
@@ -38,11 +41,14 @@ app.use('/api/leaves', leaveRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/teams', teamRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     message: 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });

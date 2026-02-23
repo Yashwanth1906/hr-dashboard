@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
 import { User, UserRole } from '../types';
-import { mockUsers } from '../lib/mock-data';
+import { API_URL } from '../utils/utils';
 
 interface AuthContextType {
   user: User | null;
@@ -8,7 +9,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
+  updateOnBoardingStatus: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,46 +19,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // We can optionally add a useEffect here if there's a /me endpoint in the future to maintain session
+
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+      const { user: backendUser, token } = response.data;
 
-      // Mock authentication - find user by email
-      const foundUser = mockUsers.find((u) => u.email === email);
-      if (foundUser) {
-        setUser(foundUser);
-      } else {
-        throw new Error('Invalid email or password');
+      localStorage.setItem('token', token);
+
+      setUser({
+        id: backendUser.id,
+        name: `${backendUser.firstName} ${backendUser.lastName}`,
+        email: backendUser.email,
+        role: backendUser.role.toLowerCase() as UserRole,
+        isOnBoarded: backendUser.isOnBoarded,
+      });
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.error || 'Invalid credentials');
       }
+      throw new Error('An error occurred during login');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const logout = useCallback(() => {
+    localStorage.removeItem('token');
     setUser(null);
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
+  const register = useCallback(async (firstName: string, lastName: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await axios.post(`${API_URL}/auth/register`, { firstName, lastName, email, password });
+      const { user: backendUser, token } = response.data;
 
-      // Mock registration - create new user
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        name,
-        email,
-        role: 'employee',
-        joinDate: new Date().toISOString().split('T')[0],
-      };
-      setUser(newUser);
+      localStorage.setItem('token', token);
+
+      setUser({
+        id: backendUser.id,
+        name: `${backendUser.firstName} ${backendUser.lastName}`,
+        email: backendUser.email,
+        role: backendUser.role.toLowerCase() as UserRole,
+        isOnBoarded: backendUser.isOnBoarded,
+        joinDate: backendUser.createdAt ? new Date(backendUser.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      });
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.error || 'Registration failed');
+      }
+      throw new Error('An error occurred during registration');
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const updateOnBoardingStatus = useCallback(() => {
+    setUser((prev) => (prev ? { ...prev, isOnBoarded: true } : prev));
   }, []);
 
   return (
@@ -68,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         register,
+        updateOnBoardingStatus,
       }}
     >
       {children}

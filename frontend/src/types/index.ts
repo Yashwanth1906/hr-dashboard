@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  isOnBoarded: boolean;
   avatar?: string;
   department?: string;
   joinDate?: string;
@@ -24,11 +25,16 @@ export interface Task {
   assignedTo?: User; // Employee assigned to task
   dueDate: string;
   createdAt: string;
+  isApproved?: boolean;
   tags?: TaskTag[];
-  prLink?: string;
+  githubUrl?: string;
+  commitId?: string;
+  feedback?: string;
   reviewer?: User;
+  tester?: User;
   startedAt?: string;
   completedAt?: string;
+  team?: any;
 }
 
 export interface Team {

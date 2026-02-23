@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
-import { mockUsers } from '../lib/mock-data';
+
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
   const { addNotification } = useNotifications();
 
-  const [email, setEmail] = useState('sarah.johnson@company.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,17 +94,7 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Demo Info */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs font-medium text-blue-900 mb-2">Demo Accounts:</p>
-            <div className="space-y-1 text-xs text-blue-800">
-              {mockUsers.slice(0, 3).map((user) => (
-                <p key={user.id}>
-                  <span className="font-medium">{user.role}:</span> {user.email}
-                </p>
-              ))}
-            </div>
-          </div>
+
 
           {/* Footer */}
           <div className="mt-6 text-center">

@@ -1,4 +1,4 @@
-import { Role, TaskStatus, Priority, LeaveType, LeaveStatus } from '@prisma/client'
+import { TaskStatus, Priority, LeaveType, LeaveStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../src/lib/prisma'
 
@@ -37,46 +37,49 @@ async function main() {
     data: {
       name: 'Main Office',
       latitude: 40.7128,
-      longtitude: -74.0060,
+      longitude: -74.0060,
     },
   })
   console.log('✅ Company branches created')
 
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 10)
-  const adminUser = await prisma.user.create({
+  const adminUser = await (prisma.user.create as any)({
     data: {
       email: 'admin@company.com',
       password: adminPassword,
       firstName: 'Admin',
       lastName: 'User',
-      role: UserRole.ADMIN,
+      role: 'ADMIN',
+      isOnBoarded: true,
     },
   })
   console.log('✅ Admin user created:', adminUser.email)
 
   // Create HR user
   const hrPassword = await bcrypt.hash('hr123', 10)
-  const hrUser = await prisma.user.create({
+  const hrUser = await (prisma.user.create as any)({
     data: {
       email: 'hr@company.com',
       password: hrPassword,
       firstName: 'HR',
       lastName: 'Manager',
-      role: UserRole.HR,
+      role: 'HR',
+      isOnBoarded: true,
     },
   })
   console.log('✅ HR user created:', hrUser.email)
 
   // Create manager user
   const managerPassword = await bcrypt.hash('manager123', 10)
-  const managerUser = await prisma.user.create({
+  const managerUser = await (prisma.user.create as any)({
     data: {
       email: 'manager@company.com',
       password: managerPassword,
       firstName: 'John',
       lastName: 'Manager',
-      role: UserRole.MANAGER,
+      role: 'MANAGER',
+      isOnBoarded: true,
     },
   })
   console.log('✅ Manager user created:', managerUser.email)
@@ -109,11 +112,12 @@ async function main() {
 
   const employeeUsers = []
   for (const emp of employeeData) {
-    const user = await prisma.user.create({
+    const user = await (prisma.user.create as any)({
       data: {
         ...emp,
         password: employeePassword,
-        role: UserRole.EMPLOYEE,
+        role: 'EMPLOYEE',
+        isOnBoarded: true,
       },
     })
     employeeUsers.push(user)
@@ -131,7 +135,6 @@ async function main() {
       address: '123 Admin St',
       kpi: 95,
       attendanceRate: 98,
-      teamId: '', // Will be updated after team creation
     },
   })
 
@@ -145,7 +148,6 @@ async function main() {
       address: '456 HR Ave',
       kpi: 92,
       attendanceRate: 97,
-      teamId: '', // Will be updated after team creation
     },
   })
 
@@ -159,7 +161,6 @@ async function main() {
       address: '789 Manager Blvd',
       kpi: 90,
       attendanceRate: 96,
-      teamId: '', // Will be updated after team creation
     },
   })
 
@@ -175,7 +176,6 @@ async function main() {
         address: `${i + 321} Employee Ln`,
         kpi: 85 + i * 2,
         attendanceRate: 93 + i,
-        teamId: '', // Will be updated after team creation
       },
     })
     employees.push(emp)
@@ -187,7 +187,7 @@ async function main() {
     data: {
       name: 'Engineering Team',
       description: 'Main engineering team',
-      managerId: managerEmployee.id,
+      managers: { connect: [{ id: managerEmployee.id }] },
       productName: 'Core Product',
     },
   })
@@ -196,7 +196,7 @@ async function main() {
     data: {
       name: 'HR Team',
       description: 'Human resources team',
-      managerId: hrEmployee.id,
+      managers: { connect: [{ id: hrEmployee.id }] },
       productName: 'HR Management',
     },
   })
@@ -249,6 +249,7 @@ async function main() {
       description: 'Write comprehensive documentation for the new API endpoints',
       status: TaskStatus.IN_PROGRESS,
       priority: Priority.HIGH,
+      isApproved: true,
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
     {
@@ -256,6 +257,7 @@ async function main() {
       description: 'Review and approve pending pull requests from the team',
       status: TaskStatus.ASSIGNED,
       priority: Priority.MEDIUM,
+      isApproved: true,
       dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
     },
     {
@@ -263,6 +265,7 @@ async function main() {
       description: 'Implement new design changes for the company website',
       status: TaskStatus.COMPLETED,
       priority: Priority.LOW,
+      isApproved: true,
       completedAt: new Date(),
     },
     {
@@ -270,6 +273,7 @@ async function main() {
       description: 'Compile and analyze data for the quarterly performance report',
       status: TaskStatus.IN_PROGRESS,
       priority: Priority.HIGH,
+      isApproved: true,
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     },
   ]
@@ -280,6 +284,8 @@ async function main() {
       data: {
         ...tasks[i],
         assigneeId: allEmployees[i % allEmployees.length].id,
+        createdById: adminEmployee.id,
+        teamId: engineeringTeam.id,
       },
     })
     console.log('✅ Task created:', task.title)

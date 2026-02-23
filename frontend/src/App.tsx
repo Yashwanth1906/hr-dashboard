@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import OnboardingPage from './pages/OnboardingPage';
 import TasksPage from './pages/TasksPage';
 import AssignedTasksPage from './pages/AssignedTasksPage';
 import TeamsPage from './pages/TeamsPage';
@@ -19,6 +20,7 @@ import SettingsPage from './pages/SettingsPage';
 import SubmitBugPage from './pages/SubmitBugPage';
 import SubmitFeaturePage from './pages/SubmitFeaturePage';
 import NotFoundPage from './pages/NotFoundPage';
+import ApprovalsPage from './pages/ApprovalsPage';
 
 function App() {
   return (
@@ -36,6 +38,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute allowNotOnboarded>
+                  <OnboardingPage />
                 </ProtectedRoute>
               }
             />
@@ -116,6 +126,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SubmitFeaturePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/approvals"
+              element={
+                <ProtectedRoute>
+                  <ApprovalsPage />
                 </ProtectedRoute>
               }
             />

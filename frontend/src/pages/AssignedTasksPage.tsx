@@ -2,14 +2,84 @@ import React, { useState } from 'react';
 import AppShell from '../components/AppShell';
 import TaskModal from '../components/TaskModal';
 import { mockTasks } from '../lib/mock-data';
-import { Task, User } from '../types';
+import { Task, User, TaskStatus, TaskPriority } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import { API_URL } from '../utils/utils';
 
 const AssignedTasksPage: React.FC = () => {
   const { user } = useAuth();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tasks, setTasks] = useState(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const formatTask = (bt: any): Task => ({
+    id: bt.id,
+    title: bt.title,
+    description: bt.description || '',
+    status: (bt.status || 'TODO').toLowerCase().replace('_', '-') as TaskStatus,
+    priority: (bt.priority || 'MEDIUM').toLowerCase() as TaskPriority,
+    assignee: bt.createdBy ? {
+      id: bt.createdBy.userId,
+      name: `${bt.createdBy.user?.firstName} ${bt.createdBy.user?.lastName}`,
+      email: bt.createdBy.user?.email,
+      role: bt.createdBy.user?.role?.toLowerCase() as any,
+      avatar: bt.createdBy.user?.avatar || `https://ui-avatars.com/api/?name=${bt.createdBy.user?.firstName}+${bt.createdBy.user?.lastName}`,
+      isOnBoarded: true
+    } : ({} as any),
+    assignedTo: bt.assignee ? {
+      id: bt.assignee.userId,
+      name: `${bt.assignee.user?.firstName} ${bt.assignee.user?.lastName}`,
+      email: bt.assignee.user?.email,
+      role: bt.assignee.user?.role?.toLowerCase() as any,
+      avatar: bt.assignee.user?.avatar || `https://ui-avatars.com/api/?name=${bt.assignee.user?.firstName}+${bt.assignee.user?.lastName}`,
+      isOnBoarded: true
+    } : undefined,
+    dueDate: bt.dueDate ? bt.dueDate.split('T')[0] : '',
+    createdAt: bt.createdAt.split('T')[0],
+    isApproved: bt.isApproved,
+    tags: bt.tags || [],
+    githubUrl: bt.githubUrl,
+    commitId: bt.commitId,
+    feedback: bt.feedback,
+    reviewer: bt.reviewer ? {
+      id: bt.reviewer.userId,
+      name: `${bt.reviewer.user?.firstName} ${bt.reviewer.user?.lastName}`,
+      email: bt.reviewer.user?.email,
+      role: bt.reviewer.user?.role?.toLowerCase() as any,
+      avatar: bt.reviewer.user?.avatar || `https://ui-avatars.com/api/?name=${bt.reviewer.user?.firstName}+${bt.reviewer.user?.lastName}`,
+      isOnBoarded: true
+    } : undefined,
+    tester: bt.tester ? {
+      id: bt.tester.userId,
+      name: `${bt.tester.user?.firstName} ${bt.tester.user?.lastName}`,
+      email: bt.tester.user?.email,
+      role: bt.tester.user?.role?.toLowerCase() as any,
+      avatar: bt.tester.user?.avatar || `https://ui-avatars.com/api/?name=${bt.tester.user?.firstName}+${bt.tester.user?.lastName}`,
+      isOnBoarded: true
+    } : undefined,
+    team: bt.team
+  });
+
+  const fetchMyTasks = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`${API_URL}/tasks/assigned`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTasks(data.map(formatTask));
+    } catch (error) {
+      console.error('Failed to fetch my tasks', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchMyTasks();
+  }, [user]);
 
   const userAssignedTasks = tasks.filter(
     t => t.assignedTo?.id === user?.id && ['assigned', 'in-progress', 'review', 'qa'].includes(t.status)
@@ -34,52 +104,49 @@ const AssignedTasksPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleStartTask = (taskId: string) => {
-    setTasks(tasks.map(t => {
-      if (t.id === taskId) {
-        return { ...t, status: 'in-progress' as const, startedAt: new Date().toISOString().split('T')[0] };
-      }
-      return t;
-    }));
-    setIsModalOpen(false);
+  const handleStartTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/tasks/${taskId}`, { status: 'IN_PROGRESS' }, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchMyTasks();
+      setIsModalOpen(false);
+    } catch (e) { console.error(e); }
   };
 
-  const handleAddPR = (taskId: string, prLink: string, reviewer: User) => {
-    setTasks(tasks.map(t => {
-      if (t.id === taskId) {
-        return { ...t, prLink, reviewer, status: 'review' as const };
-      }
-      return t;
-    }));
-    setIsModalOpen(false);
+  const handleAddPR = async (taskId: string, githubUrl: string, reviewer: User) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/tasks/${taskId}`, { status: 'REVIEW', githubUrl, reviewerId: reviewer.id }, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchMyTasks();
+      setIsModalOpen(false);
+    } catch (e) { console.error(e); }
   };
 
-  const handleCompleteTask = (taskId: string) => {
-    setTasks(tasks.map(t => {
-      if (t.id === taskId) {
-        return { ...t, status: 'completed' as const, completedAt: new Date().toISOString().split('T')[0] };
-      }
-      return t;
-    }));
-    setIsModalOpen(false);
+  const handleCompleteTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/tasks/${taskId}`, { status: 'COMPLETED' }, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchMyTasks();
+      setIsModalOpen(false);
+    } catch (e) { console.error(e); }
   };
 
-  const handleMoveToQA = (taskId: string) => {
-    setTasks(tasks.map(t => {
-      if (t.id === taskId) {
-        return { ...t, status: 'qa' as const };
-      }
-      return t;
-    }));
+  const handleMoveToQA = async (taskId: string, commitId: string, testerId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/tasks/${taskId}`, { status: 'QA', commitId, testerId }, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchMyTasks();
+      setIsModalOpen(false);
+    } catch (e) { console.error(e); }
   };
 
-  const handleMoveBack = (taskId: string) => {
-    setTasks(tasks.map(t => {
-      if (t.id === taskId) {
-        return { ...t, status: 'in-progress' as const };
-      }
-      return t;
-    }));
+  const handleMoveBack = async (taskId: string, feedback: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/tasks/${taskId}`, { status: 'IN_PROGRESS', feedback }, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchMyTasks();
+      setIsModalOpen(false);
+    } catch (e) { console.error(e); }
   };
 
   const tasksByStatus = {
