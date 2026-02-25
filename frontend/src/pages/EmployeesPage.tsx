@@ -1,19 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
 import CompletedTaskModal from '../components/CompletedTaskModal';
-import { mockEmployees, mockAttendance, mockCertifications, mockEmployeeAnalytics, mockAIReviews, mockTasks } from '../lib/mock-data';
+import { mockAttendance, mockCertifications, mockEmployeeAnalytics, mockAIReviews, mockTasks } from '../lib/mock-data';
 import { Employee, Task } from '../types';
 
 const EmployeesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null); // Changed to any to map API type
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
-  const filteredEmployees = mockEmployees.filter((emp) =>
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.position.toLowerCase().includes(searchTerm.toLowerCase())
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [employeeDetails, setEmployeeDetails] = useState<any>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:6969/api/employees`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setEmployees(data);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchEmployees();
+  }, []);
+
+  useEffect(() => {
+    if (selectedEmployee) {
+      const fetchEmployeeDetails = async () => {
+        try {
+          setIsLoadingDetails(true);
+          const token = localStorage.getItem('token');
+          const userId = selectedEmployee.user?.id || selectedEmployee.userId || selectedEmployee.id; // Natively resolve ID matching backend expectations
+          const res = await fetch(`http://localhost:6969/api/employees/getDetails/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setEmployeeDetails(data);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoadingDetails(false);
+        }
+      };
+      fetchEmployeeDetails();
+    } else {
+      setEmployeeDetails(null);
+    }
+  }, [selectedEmployee]);
+
+  const filteredEmployees = employees.filter((emp) =>
+    emp.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.jobRole?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.department?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const statusColors: Record<string, string> = {
@@ -23,22 +73,22 @@ const EmployeesPage: React.FC = () => {
   };
 
   if (selectedEmployee) {
-    const employeeAnalytics = mockEmployeeAnalytics.find(a => a.employeeId === selectedEmployee.id);
-    const employeeAttendance = mockAttendance.filter(a => a.employeeId === selectedEmployee.id).slice(-30);
+    if (isLoadingDetails) {
+      return (
+        <AppShell>
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+          </div>
+        </AppShell>
+      );
+    }
+
+    const { kpiScore, overallScore, attendanceStats, attendanceRate, completedTasks } = employeeDetails || {
+      kpiScore: 0, overallScore: 0, attendanceStats: { present: 0, late: 0, absent: 0, halfDay: 0 }, attendanceRate: 0, completedTasks: []
+    };
+
     const employeeCerts = mockCertifications.filter(c => c.employeeId === selectedEmployee.id);
     const employeeReview = mockAIReviews.find(r => r.employeeId === selectedEmployee.id);
-    const completedTasks = mockTasks.filter(t => t.assignedTo?.id === selectedEmployee.id && t.status === 'completed');
-
-    const attendanceStats = employeeAttendance.reduce(
-      (acc, att) => {
-        if (att.status === 'present') acc.present++;
-        if (att.status === 'late') acc.late++;
-        if (att.status === 'absent') acc.absent++;
-        if (att.status === 'half-day') acc.halfDay++;
-        return acc;
-      },
-      { present: 0, late: 0, absent: 0, halfDay: 0 }
-    );
 
     return (
       <AppShell>
@@ -58,18 +108,19 @@ const EmployeesPage: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-6 flex items-start justify-between">
             <div className="flex items-center gap-6">
               <img
-                src={selectedEmployee.avatar}
-                alt={selectedEmployee.name}
+                src={selectedEmployee.user?.avatar || `https://ui-avatars.com/api/?name=${selectedEmployee.user?.firstName}+${selectedEmployee.user?.lastName}&background=random`}
+                alt={`${selectedEmployee.user?.firstName} ${selectedEmployee.user?.lastName}`}
                 className="w-24 h-24 rounded-full"
               />
               <div>
-                <h1 className="text-3xl font-bold text-slate-900">{selectedEmployee.name}</h1>
-                <p className="text-slate-600 text-lg">{selectedEmployee.position}</p>
-                <p className="text-slate-500 mt-1">{selectedEmployee.email}</p>
+                <h1 className="text-3xl font-bold text-slate-900">{selectedEmployee.user?.firstName} {selectedEmployee.user?.lastName}</h1>
+                <p className="text-slate-600 text-lg">{selectedEmployee.jobRole?.name || 'Unknown Position'}</p>
+                <p className="text-slate-500 mt-1">{selectedEmployee.user?.email}</p>
               </div>
             </div>
-            <span className={`inline-block px-4 py-2 rounded-full text-sm font-semibold ${statusColors[selectedEmployee.status]}`}>
-              {selectedEmployee.status.charAt(0).toUpperCase() + selectedEmployee.status.slice(1).replace('-', ' ')}
+            {/* Keeping Status static right now as per original mock flow if active/inactive isn't natively bound */}
+            <span className={`inline-block px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-700`}>
+              Active
             </span>
           </div>
 
@@ -81,15 +132,15 @@ const EmployeesPage: React.FC = () => {
             </div>
             <div className="bg-white rounded-lg shadow-md p-4">
               <p className="text-slate-600 text-sm font-medium">Attendance Rate</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{employeeAnalytics?.attendanceRate || 0}%</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{attendanceRate || 0}%</p>
             </div>
             <div className="bg-white rounded-lg shadow-md p-4">
               <p className="text-slate-600 text-sm font-medium">KPI Score</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{employeeAnalytics?.kpiScore.toFixed(1) || 0}/10</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{(kpiScore || 0).toFixed(1)}/10</p>
             </div>
             <div className="bg-white rounded-lg shadow-md p-4">
               <p className="text-slate-600 text-sm font-medium">Overall Score</p>
-              <p className="text-3xl font-bold text-purple-600 mt-2">{employeeAnalytics?.overallScore.toFixed(1) || 0}/10</p>
+              <p className="text-3xl font-bold text-purple-600 mt-2">{(overallScore || 0).toFixed(1)}/10</p>
             </div>
           </div>
 
@@ -152,7 +203,7 @@ const EmployeesPage: React.FC = () => {
             </div>
             {completedTasks.length > 0 ? (
               <div className="space-y-2">
-                {completedTasks.slice(0, 3).map((task) => (
+                {completedTasks.slice(0, 3).map((task: any) => (
                   <div
                     key={task.id}
                     onClick={() => {
@@ -265,33 +316,40 @@ const EmployeesPage: React.FC = () => {
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">Name</th>
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">Position</th>
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">Department</th>
+                  <th className="text-left py-4 px-6 font-semibold text-slate-700">Team</th>
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">Start Date</th>
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">Status</th>
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee) => (
+                {filteredEmployees.map((employee: any) => (
                   <tr key={employee.id} className="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <img
-                          src={employee.avatar}
-                          alt={employee.name}
+                          src={employee.user?.avatar || `https://ui-avatars.com/api/?name=${employee.user?.firstName}+${employee.user?.lastName}&background=random`}
+                          alt={`${employee.user?.firstName} ${employee.user?.lastName}`}
                           className="w-10 h-10 rounded-full bg-slate-300"
                         />
                         <div>
-                          <p className="font-medium text-slate-900">{employee.name}</p>
-                          <p className="text-sm text-slate-500">{employee.email}</p>
+                          <p className="font-medium text-slate-900">{employee.user?.firstName} {employee.user?.lastName}</p>
+                          <p className="text-sm text-slate-500">{employee.user?.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-slate-900">{employee.position}</td>
-                    <td className="py-4 px-6 text-slate-600">{employee.department}</td>
-                    <td className="py-4 px-6 text-slate-600">{employee.startDate}</td>
+                    <td className="py-4 px-6 text-slate-900">{employee.jobRole?.name || 'N/A'}</td>
+                    <td className="py-4 px-6 text-slate-600">{employee.department?.name || 'N/A'}</td>
+                    <td className="py-4 px-6 text-slate-600">
+                      <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">
+                        {employee.team?.name || 'Unassigned'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-slate-600">{new Date(employee.joinDate).toLocaleDateString()}</td>
                     <td className="py-4 px-6">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusColors[employee.status]}`}>
-                        {employee.status.charAt(0).toUpperCase() + employee.status.slice(1).replace('-', ' ')}
+                      {/* Active Status placeholder until mapped */}
+                      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                        Active
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -322,18 +380,18 @@ const EmployeesPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <p className="text-slate-600 text-sm font-medium">Total Employees</p>
-            <p className="text-3xl font-bold text-slate-900 mt-2">{mockEmployees.length}</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">{employees.length}</p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
             <p className="text-slate-600 text-sm font-medium">Active</p>
             <p className="text-3xl font-bold text-green-600 mt-2">
-              {mockEmployees.filter(e => e.status === 'active').length}
+              {employees.length /* Using total as active proxy for now */}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
             <p className="text-slate-600 text-sm font-medium">On Leave</p>
             <p className="text-3xl font-bold text-amber-600 mt-2">
-              {mockEmployees.filter(e => e.status === 'on-leave').length}
+              0
             </p>
           </div>
         </div>

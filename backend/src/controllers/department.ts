@@ -13,8 +13,8 @@ export const getAllDepartments = async (req: Request, res: Response) => {
 
 export const getDepartmentById = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        if (id === undefined) {
+        const id = req.params.id as string;
+        if (!id) {
             return res.status(400).json({ message: 'Department ID is required' });
         }
         const department = await prisma.department.findUnique({
@@ -45,9 +45,9 @@ export const createDepartment = async (req: Request, res: Response) => {
 
 export const updateDepartment = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { name } = req.body;
-        if (id === undefined) {
+        if (!id) {
             return res.status(400).json({ message: 'Department ID is required' });
         }
         const department = await prisma.department.update({
@@ -63,8 +63,8 @@ export const updateDepartment = async (req: Request, res: Response) => {
 
 export const deleteDepartment = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        if (id === undefined) {
+        const id = req.params.id as string;
+        if (!id) {
             return res.status(400).json({ message: 'Department ID is required' });
         }
         await prisma.department.delete({

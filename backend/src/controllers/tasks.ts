@@ -471,7 +471,9 @@ export const getAssignedTasks = async (req: any, res: any) => {
             where: {
                 OR: [
                     { assigneeId: employee.id },
-                    { assigneeId: null }
+                    { assigneeId: null },
+                    { reviewerId: employee.id },
+                    { testerId: employee.id }
                 ]
             },
             include: {

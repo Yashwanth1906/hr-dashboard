@@ -69,7 +69,7 @@ const ApprovalsPage: React.FC = () => {
         try {
             const token = localStorage.getItem('token');
             await fetch(`http://localhost:6969/api/leaves/${leaveId}/status`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
@@ -95,8 +95,8 @@ const ApprovalsPage: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('tasks')}
                         className={`py-2 px-4 font-medium text-sm border-b-2 transition-colors ${activeTab === 'tasks'
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                             }`}
                     >
                         Pending Tasks
@@ -104,8 +104,8 @@ const ApprovalsPage: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('leaves')}
                         className={`py-2 px-4 font-medium text-sm border-b-2 transition-colors ${activeTab === 'leaves'
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                             }`}
                     >
                         Pending Leaves

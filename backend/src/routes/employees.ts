@@ -6,6 +6,7 @@ import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  getEmployeeeDetails
 } from '../controllers/employees';
 
 const router = Router();
@@ -24,5 +25,7 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'HR']), updateEmployee);
 
 // Delete employee (admin only)
 router.delete('/:id', authenticate, authorize(['ADMIN']), deleteEmployee);
+
+router.get('/getDetails/:id', authenticate, getEmployeeeDetails);
 
 export default router;

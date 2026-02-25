@@ -91,7 +91,7 @@ export const getCertificationById = async (req: any, res: any) => {
 
 export const createCertification = async (req: any, res: any) => {
     try {
-        const { employeeId, name, issuer, issueDate, expiryDate, credentialId, url } = req.body;
+        const { employeeId, name, issuer, issueDate, expiryDate, url } = req.body;
 
         if (!employeeId || !name || !issuer || !issueDate) {
             return res.status(400).json({ message: 'Employee, name, issuer, and issue date are required' });
@@ -104,7 +104,6 @@ export const createCertification = async (req: any, res: any) => {
                 issuer,
                 issueDate: new Date(issueDate),
                 expiryDate: expiryDate ? new Date(expiryDate) : null,
-                credentialId,
                 url
             },
             include: {
@@ -118,8 +117,7 @@ export const createCertification = async (req: any, res: any) => {
             }
         });
 
-        // Notify employee - wait, notification model may not exist? Let's check schema.
-        // If it fails, I'll remove it later
+        // Notify employee
         try {
             await (prisma as any).notification.create({
                 data: {
@@ -143,7 +141,7 @@ export const createCertification = async (req: any, res: any) => {
 export const updateCertification = async (req: any, res: any) => {
     try {
         const { id } = req.params;
-        const { name, issuer, issueDate, expiryDate, credentialId, url } = req.body;
+        const { name, issuer, issueDate, expiryDate, url } = req.body;
 
         const existingCert = await prisma.certification.findUnique({
             where: { id }
@@ -160,7 +158,6 @@ export const updateCertification = async (req: any, res: any) => {
                 issuer: issuer !== undefined ? issuer : undefined,
                 issueDate: issueDate ? new Date(issueDate) : undefined,
                 expiryDate: expiryDate !== undefined ? (expiryDate ? new Date(expiryDate) : null) : undefined,
-                credentialId: credentialId !== undefined ? credentialId : undefined,
                 url: url !== undefined ? url : undefined
             },
             include: {

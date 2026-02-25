@@ -7,10 +7,16 @@ interface JwtPayload {
   role: string;
 }
 
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: JwtPayload;
+  }
+}
+
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({ error: 'No token provided' });
       return;
@@ -18,10 +24,11 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as JwtPayload;
-    
+
     req.user = decoded;
     next();
   } catch (error) {
+    console.error('JWT Error:', error);
     res.status(401).json({ error: 'Invalid token' });
     return;
   }

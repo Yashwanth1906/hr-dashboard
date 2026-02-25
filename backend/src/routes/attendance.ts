@@ -2,10 +2,8 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import {
   getAllAttendance,
-  getAttendanceById,
-  createAttendance,
-  updateAttendance,
-  deleteAttendance,
+  markAttendance,
+  checkOut,
   getAttendanceStats,
 } from '../controllers/attendance';
 
@@ -17,16 +15,10 @@ router.get('/', authenticate, getAllAttendance);
 // Get attendance statistics
 router.get('/stats/summary', authenticate, getAttendanceStats);
 
-// Get attendance by ID
-router.get('/:id', authenticate, getAttendanceById);
-
 // Create attendance record
-router.post('/', authenticate, authorize(['ADMIN', 'HR']), createAttendance);
+router.post('/mark', authenticate, authorize(['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE']), markAttendance);
 
-// Update attendance record
-router.put('/:id', authenticate, authorize(['ADMIN', 'HR']), updateAttendance);
-
-// Delete attendance record
-router.delete('/:id', authenticate, authorize(['ADMIN', 'HR']), deleteAttendance);
+// Check out
+router.put('/checkout', authenticate, authorize(['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE']), checkOut);
 
 export default router;

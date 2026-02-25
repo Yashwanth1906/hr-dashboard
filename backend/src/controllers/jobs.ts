@@ -13,8 +13,8 @@ export const getAllJobs = async (req: Request, res: Response) => {
 
 export const getJobById = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        if (id === undefined) {
+        const id = req.params.id as string;
+        if (!id) {
             return res.status(400).json({ message: 'Job ID is required' });
         }
         const job = await prisma.jobRole.findUnique({
@@ -45,9 +45,9 @@ export const createJob = async (req: Request, res: Response) => {
 
 export const updateJob = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { name, salary } = req.body;
-        if (id === undefined) {
+        if (!id) {
             return res.status(400).json({ message: 'Job ID is required' });
         }
         const job = await prisma.jobRole.update({
@@ -63,8 +63,8 @@ export const updateJob = async (req: Request, res: Response) => {
 
 export const deleteJob = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        if (id === undefined) {
+        const id = req.params.id as string;
+        if (!id) {
             return res.status(400).json({ message: 'Job ID is required' });
         }
         await prisma.jobRole.delete({

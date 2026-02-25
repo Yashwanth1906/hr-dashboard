@@ -1,40 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
-import { mockEmployees, mockTasks, mockAttendance, mockTeams } from '../lib/mock-data';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const DashboardPage: React.FC = () => {
-  // Calculate metrics
-  const totalEmployees = mockEmployees.length;
-  const presentToday = mockAttendance.filter(
-    (a) => a.date === new Date().toISOString().split('T')[0] && a.status === 'present'
-  ).length;
-  const activeTasks = mockTasks.filter((t) => t.status === 'in-progress').length;
-  const totalTeams = mockTeams.length;
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Chart data - Department distribution
-  const departmentData = [
-    { name: 'Engineering', value: 3 },
-    { name: 'Product', value: 2 },
-    { name: 'HR', value: 1 },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:6969/api/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, []);
 
-  const COLORS = ['#2563eb', '#60a5fa', '#93c5fd'];
+  if (loading || !data) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+        </div>
+      </AppShell>
+    );
+  }
 
-  // Task status data
-  const taskStatusData = [
-    { name: 'To Do', value: mockTasks.filter((t) => t.status === 'todo').length },
-    { name: 'In Progress', value: mockTasks.filter((t) => t.status === 'in-progress').length },
-    { name: 'Review', value: mockTasks.filter((t) => t.status === 'review').length },
-    { name: 'Done', value: mockTasks.filter((t) => t.status === 'done').length },
-  ];
+  const {
+    totalEmployees,
+    totalPresentToday,
+    activeTasks,
+    totalTeams,
+    tasksByState,
+    employeesPerDepartment,
+    attendanceTrendData,
+    recentTasks
+  } = data;
 
-  // Attendance trend (last 7 days)
-  const attendanceTrendData = Array.from({ length: 7 }, (_, i) => ({
-    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-    present: Math.floor(Math.random() * mockEmployees.length * 0.8) + mockEmployees.length * 0.5,
-    absent: Math.floor(Math.random() * mockEmployees.length * 0.2),
-  }));
+  const departmentData = employeesPerDepartment.map((d: any) => ({ name: d.department, value: d.count }));
+  const COLORS = ['#2563eb', '#60a5fa', '#93c5fd', '#818cf8', '#a78bfa', '#c084fc', '#e879f9'];
+
+  const taskStatusData = tasksByState.map((t: any) => ({ name: t.state.replace('_', ' '), value: t.count }));
 
   return (
     <AppShell>
@@ -51,7 +67,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-sm font-medium">Total Employees</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{totalEmployees}</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">{totalEmployees || 0}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +81,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-sm font-medium">Present Today</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{presentToday}</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">{totalPresentToday || 0}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +95,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-sm font-medium">Active Tasks</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{activeTasks}</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">{activeTasks || 0}</p>
               </div>
               <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,7 +109,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 text-sm font-medium">Teams</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{totalTeams}</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">{totalTeams || 0}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,7 +151,7 @@ const DashboardPage: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {departmentData.map((entry, index) => (
+                  {departmentData.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -176,28 +192,26 @@ const DashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockTasks.slice(0, 5).map((task) => (
+                {recentTasks && recentTasks.map((task: any) => (
                   <tr key={task.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="py-3 px-4 text-slate-900 font-medium">{task.title}</td>
-                    <td className="py-3 px-4 text-slate-600">{task.assignee.name}</td>
+                    <td className="py-3 px-4 text-slate-600">{task.assigneeName}</td>
                     <td className="py-3 px-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        task.status === 'done' ? 'bg-green-100 text-green-700' :
-                        task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                        task.status === 'review' ? 'bg-amber-100 text-amber-700' :
-                        'bg-slate-100 text-slate-700'
-                      }`}>
-                        {task.status.charAt(0).toUpperCase() + task.status.slice(1).replace('-', ' ')}
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${task.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                          task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                            task.status === 'REVIEW' ? 'bg-amber-100 text-amber-700' :
+                              'bg-slate-100 text-slate-700'
+                        }`}>
+                        {task.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                        task.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                        task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
-                        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${task.priority === 'URGENT' ? 'bg-red-100 text-red-700' :
+                          task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                            task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                        }`}>
+                        {task.priority || 'MEDIUM'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-600">{task.dueDate}</td>
@@ -206,6 +220,9 @@ const DashboardPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          {(!recentTasks || recentTasks.length === 0) && (
+            <p className="text-slate-500 text-center py-4">No recent tasks</p>
+          )}
         </div>
       </div>
     </AppShell>

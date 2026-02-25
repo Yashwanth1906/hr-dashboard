@@ -5,7 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  isOnBoarded: boolean;
+  isOnBoarded?: boolean;
   avatar?: string;
   department?: string;
   joinDate?: string;
@@ -29,6 +29,7 @@ export interface Task {
   tags?: TaskTag[];
   githubUrl?: string;
   commitId?: string;
+  prLink?: string;
   feedback?: string;
   reviewer?: User;
   tester?: User;

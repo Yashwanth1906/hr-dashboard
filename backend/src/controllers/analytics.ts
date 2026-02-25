@@ -11,7 +11,7 @@ export const getDashboardAnalytics = async (req: any, res: any) => {
             totalEmployees,
             activeEmployees,
             totalTasks,
-            pendingTasks,
+            todoTasks,
             inProgressTasks,
             completedTasks,
             todayAttendance,
@@ -19,18 +19,21 @@ export const getDashboardAnalytics = async (req: any, res: any) => {
             upcomingCertifications
         ] = await Promise.all([
             prisma.employee.count(),
-            prisma.employee.count({ where: { status: 'ACTIVE' } }),
+            prisma.employee.count({ where: { user: { isOnBoarded: true } } }),
             prisma.task.count(),
-            prisma.task.count({ where: { status: 'PENDING' } }),
+            prisma.task.count({ where: { status: 'TODO' } }),
             prisma.task.count({ where: { status: 'IN_PROGRESS' } }),
             prisma.task.count({ where: { status: 'COMPLETED' } }),
             prisma.attendance.count({
                 where: {
-                    date: startOfDay,
-                    status: { in: ['PRESENT', 'LATE'] }
-                } as any
+                    date: {
+                        gte: startOfDay,
+                        lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+                    },
+                    checkIn: { not: null }
+                }
             }),
-            (prisma as any).leave.count({ where: { status: 'PENDING' } }),
+            prisma.leave.count({ where: { status: 'PENDING' } }),
             prisma.certification.count({
                 where: {
                     expiryDate: {
@@ -76,7 +79,7 @@ export const getDashboardAnalytics = async (req: any, res: any) => {
                 totalEmployees,
                 activeEmployees,
                 totalTasks,
-                pendingTasks,
+                pendingTasks: todoTasks,
                 inProgressTasks,
                 completedTasks,
                 todayAttendance,
@@ -90,7 +93,6 @@ export const getDashboardAnalytics = async (req: any, res: any) => {
                 assignee: task.assignee?.user ? `${task.assignee.user.firstName} ${task.assignee.user.lastName}` : null,
                 updatedAt: task.updatedAt
             })),
-            // Need to map departmentId to name actually if we had department table, but here it's departmentId so we return it
             departmentDistribution: departmentStats.map(d => ({
                 department: d.departmentId,
                 count: d._count.id
@@ -126,7 +128,7 @@ export const getEmployeeAnalytics = async (req: any, res: any) => {
                 _count: {
                     select: {
                         tasks: true,
-                        attendances: true,
+                        attendance: true,
                         leaves: true
                     }
                 }
@@ -152,7 +154,7 @@ export const getEmployeeAnalytics = async (req: any, res: any) => {
             stats.byDepartment[deptId] = (stats.byDepartment[deptId] || 0) + 1;
 
             // Status stats
-            stats.byStatus[emp.status] = (stats.byStatus[emp.status] || 0) + 1;
+            stats.byStatus['ACTIVE'] = (stats.byStatus['ACTIVE'] || 0) + 1;
 
             // Task count
             totalTasks += emp._count.tasks;
@@ -160,16 +162,14 @@ export const getEmployeeAnalytics = async (req: any, res: any) => {
 
         // Get attendance stats
         const attendanceStats = await (prisma as any).attendance.groupBy({
-            by: ['status'],
+            by: ['isLate', 'isHalfDay', 'isWFH'],
             _count: { id: true },
             where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined
         });
 
-        attendanceStats.forEach(stat => {
+        (attendanceStats as any[]).forEach((stat: any) => {
             totalAttendance += stat._count.id;
-            if (stat.status === 'PRESENT' || stat.status === 'LATE') {
-                presentAttendance += stat._count.id;
-            }
+            presentAttendance += stat._count.id;
         });
 
         stats.averageTasksPerEmployee = employees.length > 0 ? totalTasks / employees.length : 0;
@@ -181,9 +181,9 @@ export const getEmployeeAnalytics = async (req: any, res: any) => {
                 name: `${e.user.firstName} ${e.user.lastName}`,
                 email: e.user.email,
                 department: e.departmentId,
-                status: e.status,
+                status: 'ACTIVE',
                 taskCount: e._count.tasks,
-                attendanceCount: e._count.attendances,
+                attendanceCount: e._count.attendance,
                 leaveCount: e._count.leaves
             })),
             statistics: stats
@@ -251,6 +251,7 @@ export const getTaskAnalytics = async (req: any, res: any) => {
                 priority: t.priority,
                 assignee: t.assignee?.user ? `${t.assignee.user.firstName} ${t.assignee.user.lastName}` : null,
                 dueDate: t.dueDate,
+                createdAt: t.createdAt,
                 completedAt: t.completedAt,
                 isOverdue: t.dueDate && t.dueDate < now && t.status !== 'COMPLETED'
             })),
@@ -272,7 +273,7 @@ export const getAttendanceAnalytics = async (req: any, res: any) => {
     try {
         const { startDate, endDate, employeeId } = req.query;
 
-        const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(1));
+        const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
         const end = endDate ? new Date(endDate as string) : new Date();
 
         const where: any = {
@@ -283,36 +284,24 @@ export const getAttendanceAnalytics = async (req: any, res: any) => {
         };
         if (employeeId) where.employeeId = employeeId as string;
 
-        const [attendanceRecords, stats] = await Promise.all([
-            prisma.attendance.findMany({
-                where,
-                include: {
-                    employee: {
-                        include: {
-                            user: { select: { firstName: true, lastName: true } }
-                        }
+        const attendanceRecords = await prisma.attendance.findMany({
+            where,
+            include: {
+                employee: {
+                    include: {
+                        user: { select: { firstName: true, lastName: true } }
                     }
-                },
-                orderBy: { date: 'desc' }
-            }),
-            prisma.attendance.groupBy({
-                by: ['status'],
-                _count: { id: true },
-                where
-            })
-        ]);
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
 
         // Calculate statistics
         const totalRecords = attendanceRecords.length;
-        const statusCounts: Record<string, number> = {};
 
-        (stats as any[]).forEach(stat => {
-            statusCounts[stat.status] = stat._count.id;
-        });
-
-        const presentCount = statusCounts['PRESENT'] || 0;
-        const lateCount = statusCounts['LATE'] || 0;
-        const absentCount = statusCounts['ABSENT'] || 0;
+        const presentCount = attendanceRecords.filter((r) => r.checkIn).length;
+        const lateCount = attendanceRecords.filter((r) => r.isLate).length;
+        const absentCount = attendanceRecords.filter((r) => !r.checkIn).length;
 
         const attendanceRate = totalRecords > 0
             ? ((presentCount + lateCount) / totalRecords) * 100
@@ -320,13 +309,14 @@ export const getAttendanceAnalytics = async (req: any, res: any) => {
 
         // Get daily breakdown
         const dailyStats: Record<string, { present: number; absent: number; late: number }> = {};
-
         attendanceRecords.forEach(record => {
             const dateKey = record.date.toISOString().split('T')[0];
             if (!dailyStats[dateKey]) {
                 dailyStats[dateKey] = { present: 0, absent: 0, late: 0 };
             }
-            dailyStats[dateKey][(record as any).status.toLowerCase() as 'present' | 'absent' | 'late']++;
+            if (record.isLate) dailyStats[dateKey].late++;
+            if (record.checkIn) dailyStats[dateKey].present++;
+            else dailyStats[dateKey].absent++;
         });
 
         res.json({
@@ -334,7 +324,7 @@ export const getAttendanceAnalytics = async (req: any, res: any) => {
                 id: a.id,
                 employeeName: `${a.employee.user.firstName} ${a.employee.user.lastName}`,
                 date: a.date,
-                status: (a as any).status,
+                status: a.checkIn ? (a.isLate ? 'LATE' : 'PRESENT') : 'ABSENT',
                 checkIn: a.checkIn,
                 checkOut: a.checkOut
             })),

@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma';
 export const getAllAttendance = async (req: any, res: any) => {
   try {
     const { employeeId, startDate, endDate } = req.query;
-    
+
     const where: any = {};
     if (employeeId) where.employeeId = employeeId;
     if (startDate || endDate) {
@@ -35,112 +35,123 @@ export const getAllAttendance = async (req: any, res: any) => {
   }
 };
 
-export const getAttendanceById = async (req: any, res: any) => {
+export const markAttendance = async (req: any, res: any) => {
   try {
-    const { id } = req.params;
-    const attendance = await prisma.attendance.findUnique({
-      where: { id },
-      include: {
-        employee: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        },
-      },
+    const userId = req.user.userId;
+    const { isWFH, companyBranchId } = req.body;
+
+    const employee = await prisma.employee.findUnique({
+      where: { userId }
     });
 
-    if (!attendance) {
-      return res.status(404).json({ error: 'Attendance record not found' });
+    if (!employee) return res.status(404).json({ error: "Employee not found" });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        employeeId: employee.id,
+        date: { gte: today, lt: tomorrow }
+      }
+    });
+
+    if (existingAttendance) {
+      return res.status(400).json({ error: "Attendance already marked for today" });
     }
 
-    res.json(attendance);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch attendance record' });
-  }
-};
+    if (isWFH) {
+      const wfhLeave = await prisma.leave.findFirst({
+        where: {
+          employeeId: employee.id,
+          type: 'WFH' as any,
+          status: 'APPROVED',
+          startDate: { lte: new Date() },
+          endDate: { gte: today }
+        }
+      });
 
-export const createAttendance = async (req: any, res: any) => {
-  try {
-    const { employeeId, date, checkIn, checkOut, status, notes } = req.body;
+      if (!wfhLeave) {
+        return res.status(403).json({ error: "You do not have an approved WFH request for today" });
+      }
+    } else if (!companyBranchId) {
+      return res.status(400).json({ error: "Company branch is required for office attendance" });
+    }
 
     const attendance = await prisma.attendance.create({
       data: {
-        employeeId,
-        date: new Date(date),
-        checkIn: checkIn ? new Date(checkIn) : null,
-        checkOut: checkOut ? new Date(checkOut) : null,
-        status,
-        notes,
-      },
-      include: {
-        employee: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    res.status(201).json(attendance);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create attendance record' });
-  }
-};
-
-export const updateAttendance = async (req: any, res: any) => {
-  try {
-    const { id } = req.params;
-    const { checkIn, checkOut, status, notes } = req.body;
-
-    const attendance = await prisma.attendance.update({
-      where: { id },
-      data: {
-        checkIn: checkIn ? new Date(checkIn) : undefined,
-        checkOut: checkOut ? new Date(checkOut) : undefined,
-        status,
-        notes,
-      },
-      include: {
-        employee: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        },
-      },
+        employeeId: employee.id,
+        date: today,
+        checkIn: new Date(),
+        isWFH,
+        companyBranchId: isWFH ? null : companyBranchId,
+        isLate: new Date().getHours() >= 10,
+        isHalfDay: false
+      }
     });
 
     res.json(attendance);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update attendance record' });
+    console.error(error);
+    res.status(500).json({ error: 'Failed to mark attendance' });
   }
 };
 
-export const deleteAttendance = async (req: any, res: any) => {
+export const checkOut = async (req: any, res: any) => {
   try {
-    const { id } = req.params;
-    await prisma.attendance.delete({
-      where: { id },
+    const userId = req.user.userId;
+    const { isWFH, companyBranchId, checkoutLat, checkoutLng } = req.body;
+
+    const employee = await prisma.employee.findUnique({
+      where: { userId }
     });
-    res.json({ message: 'Attendance record deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete attendance record' });
+
+    if (!employee) return res.status(404).json({ error: "Employee not found" });
+
+    // Find the most recent opened checkin that has no checkout
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        employeeId: employee.id,
+        checkIn: { not: null },
+        checkOut: null
+      },
+      orderBy: { date: 'desc' }
+    });
+
+    if (!existingAttendance) {
+      return res.status(400).json({ error: "No active daily attendance found to check out of." });
+    }
+
+    // Verify WFH status constraints
+    if (isWFH) {
+      if (!existingAttendance.isWFH) {
+        return res.status(400).json({ error: "You checked in directly at a branch. You must check out from a branch." });
+      }
+    } else {
+      if (!companyBranchId) {
+        return res.status(400).json({ error: "Company branch is required for office checkout" });
+      }
+    }
+
+    const now = new Date();
+    const durationHours = existingAttendance.checkIn ? (now.getTime() - existingAttendance.checkIn.getTime()) / (1000 * 60 * 60) : 0;
+
+    const updated = await prisma.attendance.update({
+      where: { id: existingAttendance.id },
+      data: {
+        checkOut: now,
+        duration: durationHours
+      }
+    });
+
+    res.json(updated);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to checkout' });
   }
-};
+}
 
 export const getAttendanceStats = async (req: any, res: any) => {
   try {
@@ -162,11 +173,9 @@ export const getAttendanceStats = async (req: any, res: any) => {
     });
 
     const stats = {
-      present: attendanceRecords.filter((r: any) => r.status === 'PRESENT').length,
-      absent: attendanceRecords.filter((r: any) => r.status === 'ABSENT').length,
-      late: attendanceRecords.filter((r: any) => r.status === 'LATE').length,
-      halfDay: attendanceRecords.filter((r: any) => r.status === 'HALF_DAY').length,
-      onLeave: attendanceRecords.filter((r: any) => r.status === 'ON_LEAVE').length,
+      present: attendanceRecords.filter((r: any) => !!r.checkIn && !r.isHalfDay && !r.isLate).length,
+      late: attendanceRecords.filter((r: any) => r.isLate).length,
+      halfDay: attendanceRecords.filter((r: any) => r.isHalfDay).length,
       total: attendanceRecords.length,
     };
 

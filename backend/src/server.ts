@@ -18,6 +18,9 @@ import analyticsRoutes from './routes/analytics';
 import jobRoutes from './routes/jobs';
 import departmentRoutes from './routes/department';
 import teamRoutes from './routes/team';
+import dashboardRoutes from './routes/dashboard';
+import companyBranchRoutes from './routes/companyBranch';
+import uploadRoutes from './routes/upload';
 
 const app = express();
 const PORT = process.env.PORT || 6969;
@@ -44,7 +47,9 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/teams', teamRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/companyBranches', companyBranchRoutes);
+app.use('/api/upload', uploadRoutes);
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);

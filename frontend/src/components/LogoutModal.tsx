@@ -4,7 +4,7 @@ import { Branch } from '../types';
 interface LogoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmLogout: () => void;
+  onConfirmLogout: (branchId: string, lat: number, lng: number, isWFH: boolean) => void;
   branches: Branch[];
 }
 
@@ -82,8 +82,8 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
     return R * c; // distance in meters
   };
 
-  const isNearBranch = distance !== null && selectedBranch && distance <= selectedBranch.radius;
-  const canLogout = isWFH || (location && (isNearBranch || distance! > selectedBranch!.radius));
+  const isNearBranch = distance !== null && selectedBranch && distance <= 1000;
+  const canLogout = isWFH || (location && isNearBranch);
 
   if (!isOpen) return null;
 
@@ -174,7 +174,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
                   <p className={`text-xs ${isNearBranch ? 'text-green-600' : 'text-amber-600'}`}>
                     {isNearBranch
                       ? '✓ You are at the office location'
-                      : `• You are ${distance! > selectedBranch!.radius ? 'outside' : 'inside'} office geofence`}
+                      : `✗ You are outside the office (1000m radius)`}
                   </p>
                 </div>
               </div>
@@ -184,9 +184,9 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
 
         {/* Warning Message */}
         {!isWFH && location && !isNearBranch && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-700">
-              You are logging out from outside your work location. This will be recorded in your attendance log.
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-700">
+              You must be within 1000m of the office branch to perform a location-verified check out.
             </p>
           </div>
         )}
@@ -201,15 +201,18 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
           </button>
           <button
             onClick={() => {
-              onConfirmLogout();
+              if (location && selectedBranch) {
+                onConfirmLogout(selectedBranch.id, location.lat, location.lng, false);
+              } else if (isWFH) {
+                onConfirmLogout('wfh', 0, 0, true);
+              }
               onClose();
             }}
-            disabled={loading}
-            className={`flex-1 px-4 py-2 rounded-lg font-medium text-white transition ${
-              !loading
-                ? 'bg-red-600 hover:bg-red-700 cursor-pointer'
-                : 'bg-slate-300 cursor-not-allowed'
-            }`}
+            disabled={loading || !canLogout}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium text-white transition ${!loading && canLogout
+              ? 'bg-red-600 hover:bg-red-700 cursor-pointer'
+              : 'bg-slate-300 cursor-not-allowed'
+              }`}
           >
             {loading ? 'Getting Location...' : 'Logout'}
           </button>

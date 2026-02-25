@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import LogoutModal from './LogoutModal';
-import { mockBranches } from '../lib/mock-data';
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -12,7 +11,41 @@ const Navbar: React.FC = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const handleLogout = () => {
+  const [branches, setBranches] = useState<any[]>([]);
+  const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const res = await fetch(`http://localhost:6969/api/companyBranches`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setBranches(await res.json());
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchBranches();
+  }, [token]);
+
+  const handleLogout = async (branchId: string, lat: number, lng: number, isWFH: boolean) => {
+    try {
+      // First attempt to physically check the user out before logging off globally
+      await fetch(`http://localhost:6969/api/attendance/checkout`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ isWFH, companyBranchId: isWFH ? null : branchId, checkoutLat: lat, checkoutLng: lng })
+      });
+    } catch (e) {
+      console.warn("Soft fail on checkout location record on exit.", e);
+    }
+
+    // Proceed out natively
     logout();
     addNotification('Logged out successfully', 'success');
     navigate('/login');
@@ -69,9 +102,8 @@ const Navbar: React.FC = () => {
                 <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
               </div>
               <svg
-                className={`w-4 h-4 text-slate-500 transition-transform ${
-                  showUserMenu ? 'rotate-180' : ''
-                }`}
+                className={`w-4 h-4 text-slate-500 transition-transform ${showUserMenu ? 'rotate-180' : ''
+                  }`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -113,7 +145,7 @@ const Navbar: React.FC = () => {
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirmLogout={handleLogout}
-        branches={mockBranches}
+        branches={branches}
       />
     </nav>
   );

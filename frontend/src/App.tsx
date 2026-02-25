@@ -21,6 +21,7 @@ import SubmitBugPage from './pages/SubmitBugPage';
 import SubmitFeaturePage from './pages/SubmitFeaturePage';
 import NotFoundPage from './pages/NotFoundPage';
 import ApprovalsPage from './pages/ApprovalsPage';
+import MyLeavesPage from './pages/MyLeavesPage';
 
 function App() {
   return (
@@ -86,6 +87,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AttendancePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-leaves"
+              element={
+                <ProtectedRoute>
+                  <MyLeavesPage />
                 </ProtectedRoute>
               }
             />

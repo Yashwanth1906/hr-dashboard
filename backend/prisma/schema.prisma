@@ -111,8 +111,8 @@ model Attendance {
   duration Float?
   isWFH    Boolean   @default(false)
 
-  companyBranchId String
-  companyBranch   CompanyBranch @relation(fields: [companyBranchId], references: [id], onDelete: Cascade)
+  companyBranchId String?
+  companyBranch   CompanyBranch? @relation(fields: [companyBranchId], references: [id], onDelete: Cascade)
 
   isLate    Boolean @default(false)
   isHalfDay Boolean @default(false)
@@ -240,6 +240,7 @@ enum LeaveType {
   MATERNITY
   PATERNITY
   UNPAID
+  WFH
 }
 
 enum LeaveStatus {

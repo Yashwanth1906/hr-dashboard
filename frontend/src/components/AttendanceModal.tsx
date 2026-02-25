@@ -82,7 +82,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
     return R * c; // distance in meters
   };
 
-  const isNearBranch = distance !== null && selectedBranch && distance <= selectedBranch.radius;
+  const isNearBranch = distance !== null && selectedBranch && distance <= 1000;
   const canMarkAttendance = isWFH || (location && isNearBranch);
 
   if (!isOpen) return null;
@@ -168,7 +168,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
                   <p className={`text-xs ${isNearBranch ? 'text-green-600' : 'text-amber-600'}`}>
                     {isNearBranch
                       ? '✓ You are within the office geofence'
-                      : `✗ You are outside the office (${selectedBranch.radius}m radius)`}
+                      : `✗ You are outside the office (1000m radius)`}
                   </p>
                 </div>
               </div>
@@ -194,11 +194,10 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
               onClose();
             }}
             disabled={!canMarkAttendance || loading}
-            className={`flex-1 px-4 py-2 rounded-lg font-medium text-white transition ${
-              canMarkAttendance && !loading
-                ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
-                : 'bg-slate-300 cursor-not-allowed'
-            }`}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium text-white transition ${canMarkAttendance && !loading
+              ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
+              : 'bg-slate-300 cursor-not-allowed'
+              }`}
           >
             {loading ? 'Getting Location...' : 'Mark Attendance'}
           </button>

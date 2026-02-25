@@ -13,6 +13,8 @@ const TeamsPage: React.FC = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [memberDetails, setMemberDetails] = useState<any>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const [newTeam, setNewTeam] = useState({
     name: '',
@@ -54,6 +56,31 @@ const TeamsPage: React.FC = () => {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if (selectedMember) {
+      const fetchMemberDetails = async () => {
+        try {
+          setIsLoadingDetails(true);
+          const token = localStorage.getItem('token');
+          const res = await fetch(`http://localhost:6969/api/employees/getDetails/${selectedMember.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setMemberDetails(data);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoadingDetails(false);
+        }
+      };
+      fetchMemberDetails();
+    } else {
+      setMemberDetails(null);
+    }
+  }, [selectedMember]);
+
   const handleCreateTeam = async () => {
     try {
       if (!newTeam.name) return;
@@ -93,29 +120,22 @@ const TeamsPage: React.FC = () => {
   };
 
   if (selectedTeam && selectedMember) {
-    const memberData = getEmployeeData(selectedMember);
-    const memberAnalytics = mockEmployeeAnalytics.find(
-      a => a.employeeId === (memberData as Employee).id || a.employeeId === selectedMember.id
-    );
-    const memberAttendance = mockAttendance
-      .filter(a => a.employeeId === (memberData as Employee).id)
-      .slice(-30);
-    const memberCerts = mockCertifications.filter(c => c.employeeId === (memberData as Employee).id);
-    const memberReview = mockAIReviews.find(r => r.employeeId === (memberData as Employee).id);
-    const completedTasks = mockTasks.filter(
-      t => t.assignedTo?.id === selectedMember.id && t.status === 'completed'
-    );
+    if (isLoadingDetails) {
+      return (
+        <AppShell>
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+          </div>
+        </AppShell>
+      );
+    }
 
-    const attendanceStats = memberAttendance.reduce(
-      (acc, att) => {
-        if (att.status === 'present') acc.present++;
-        if (att.status === 'late') acc.late++;
-        if (att.status === 'absent') acc.absent++;
-        if (att.status === 'half-day') acc.halfDay++;
-        return acc;
-      },
-      { present: 0, late: 0, absent: 0, halfDay: 0 }
-    );
+    const { kpiScore, overallScore, attendanceStats, attendanceRate, completedTasks } = memberDetails || {
+      kpiScore: 0, overallScore: 0, attendanceStats: { present: 0, late: 0, absent: 0, halfDay: 0 }, attendanceRate: 0, completedTasks: []
+    };
+
+    const memberCerts = mockCertifications.filter(c => c.employeeId === selectedMember.id) || [];
+    const memberReview = mockAIReviews.find(r => r.employeeId === selectedMember.id) || null;
 
     return (
       <AppShell>
@@ -144,7 +164,7 @@ const TeamsPage: React.FC = () => {
               <div>
                 <h1 className="text-3xl font-bold text-slate-900">{selectedMember.firstName} {selectedMember.lastName}</h1>
                 <p className="text-slate-600 text-lg">
-                  {(memberData as Employee).position || selectedMember.role}
+                  {selectedMember.position || selectedMember.role}
                 </p>
                 <p className="text-slate-500 mt-1">{selectedMember.email}</p>
               </div>
@@ -159,15 +179,15 @@ const TeamsPage: React.FC = () => {
             </div>
             <div className="bg-white rounded-lg shadow-md p-4">
               <p className="text-slate-600 text-sm font-medium">Attendance Rate</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{memberAnalytics?.attendanceRate || 0}%</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{attendanceRate || 0}%</p>
             </div>
             <div className="bg-white rounded-lg shadow-md p-4">
               <p className="text-slate-600 text-sm font-medium">KPI Score</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{memberAnalytics?.kpiScore.toFixed(1) || 0}/10</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{(kpiScore || 0).toFixed(1)}/10</p>
             </div>
             <div className="bg-white rounded-lg shadow-md p-4">
               <p className="text-slate-600 text-sm font-medium">Overall Score</p>
-              <p className="text-3xl font-bold text-purple-600 mt-2">{memberAnalytics?.overallScore.toFixed(1) || 0}/10</p>
+              <p className="text-3xl font-bold text-purple-600 mt-2">{(overallScore || 0).toFixed(1)}/10</p>
             </div>
           </div>
 
@@ -256,6 +276,36 @@ const TeamsPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Completed Tasks Log */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">Completed Tasks</h2>
+            <div className="overflow-y-auto max-h-[400px] border border-slate-200 rounded-lg">
+              {completedTasks.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">No completed tasks found.</div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {completedTasks.map((task: any) => (
+                    <div key={task.id} className="p-4 hover:bg-slate-50 transition">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-slate-900">{task.title}</h4>
+                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                          Completed
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600 line-clamp-2 mb-3">{task.description}</p>
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>Team: {task.team?.name || 'N/A'}</span>
+                        {task.completedAt && (
+                          <span>Completed on: {new Date(task.completedAt).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </AppShell>
     );
