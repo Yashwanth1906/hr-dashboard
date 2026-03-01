@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -10,11 +12,12 @@ const DashboardPage: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:6969/api/dashboard`, {
+        const res = await axios(`${API_URL}/dashboard`, {
+          validateStatus: () => true,
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) {
-          const json = await res.json();
+        if ((res.status >= 200 && res.status < 300)) {
+          const json = res.data;
           setData(json);
         }
       } catch (e) {
@@ -198,18 +201,18 @@ const DashboardPage: React.FC = () => {
                     <td className="py-3 px-4 text-slate-600">{task.assigneeName}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${task.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                          task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
-                            task.status === 'REVIEW' ? 'bg-amber-100 text-amber-700' :
-                              'bg-slate-100 text-slate-700'
+                        task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                          task.status === 'REVIEW' ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-700'
                         }`}>
                         {task.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${task.priority === 'URGENT' ? 'bg-red-100 text-red-700' :
-                          task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-                            task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-green-100 text-green-700'
+                        task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                          task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
                         }`}>
                         {task.priority || 'MEDIUM'}
                       </span>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
 import RequestLeaveModal from '../components/RequestLeaveModal';
 import { useAuth } from '../contexts/AuthContext';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const MyLeavesPage: React.FC = () => {
     const { user } = useAuth();
@@ -13,11 +15,11 @@ const MyLeavesPage: React.FC = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:6969/api/leaves/my', {
+            const res = await axios(`${API_URL}/leaves/my`, { validateStatus: () => true, 
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (res.ok) {
-                const data = await res.json();
+            if ((res.status >= 200 && res.status < 300)) {
+                const data = res.data;
                 setLeaves(data || []);
             }
         } catch (e) {

@@ -4,6 +4,8 @@ import AttendanceModal from '../components/AttendanceModal';
 import LogoutModal from '../components/LogoutModal';
 import { useAuth } from '../contexts/AuthContext';
 import { Branch } from '../types';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const AttendancePage: React.FC = () => {
   const { user } = useAuth();
@@ -19,11 +21,11 @@ const AttendancePage: React.FC = () => {
 
   const fetchBranches = async () => {
     try {
-      const res = await fetch(`http://localhost:6969/api/companyBranches`, {
+      const res = await axios(`${API_URL}/companyBranches`, { validateStatus: () => true, 
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
-        setBranches(await res.json());
+      if ((res.status >= 200 && res.status < 300)) {
+        setBranches(res.data);
       }
     } catch (e) {
       console.error(e);
@@ -34,11 +36,11 @@ const AttendancePage: React.FC = () => {
     setLoading(true);
     try {
       // 1. Fetch active ongoing session anywhere
-      const activeCheckRes = await fetch(`http://localhost:6969/api/attendance?employeeEmail=${user?.email}&startDate=2000-01-01`, {
+      const activeCheckRes = await axios(`${API_URL}/attendance?employeeEmail=${user?.email}&startDate=2000-01-01`, { validateStatus: () => true, 
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (activeCheckRes.ok) {
-        const fullRecordsForUser = await activeCheckRes.json();
+      if ((activeCheckRes.status >= 200 && activeCheckRes.status < 300)) {
+        const fullRecordsForUser = activeCheckRes.data;
         const curUserAll = fullRecordsForUser.filter((a: any) =>
           a.employee?.user?.email === user?.email || a.employee?.user?.firstName === user?.name?.split(' ')[0]
         );
@@ -56,11 +58,11 @@ const AttendancePage: React.FC = () => {
       const endOfDay = new Date(selectedDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const res = await fetch(`http://localhost:6969/api/attendance?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}`, {
+      const res = await axios(`${API_URL}/attendance?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}`, { validateStatus: () => true, 
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
-        setAttendanceRecords(await res.json());
+      if ((res.status >= 200 && res.status < 300)) {
+        setAttendanceRecords(res.data);
       }
     } catch (e) {
       console.error(e);
@@ -100,18 +102,18 @@ const AttendancePage: React.FC = () => {
 
   const handleMarkAttendance = async (branchId: string, lat: number, lng: number, isWFH: boolean) => {
     try {
-      const res = await fetch(`http://localhost:6969/api/attendance/mark`, {
+      const res = await axios(`${API_URL}/attendance/mark`, { validateStatus: () => true, 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ isWFH, companyBranchId: isWFH ? null : branchId })
+        data: JSON.stringify({ isWFH, companyBranchId: isWFH ? null : branchId })
       });
-      if (res.ok) {
+      if ((res.status >= 200 && res.status < 300)) {
         fetchAttendanceRecords();
       } else {
-        const err = await res.json();
+        const err = res.data;
         alert(err.error || 'Failed to mark attendance');
       }
     } catch (e) {
@@ -122,18 +124,18 @@ const AttendancePage: React.FC = () => {
 
   const handleCheckOut = async (branchId: string, lat: number, lng: number, isWFH: boolean) => {
     try {
-      const res = await fetch(`http://localhost:6969/api/attendance/checkout`, {
+      const res = await axios(`${API_URL}/attendance/checkout`, { validateStatus: () => true, 
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ isWFH, companyBranchId: isWFH ? null : branchId, checkoutLat: lat, checkoutLng: lng })
+        data: JSON.stringify({ isWFH, companyBranchId: isWFH ? null : branchId, checkoutLat: lat, checkoutLng: lng })
       });
-      if (res.ok) {
+      if ((res.status >= 200 && res.status < 300)) {
         fetchAttendanceRecords();
       } else {
-        const err = await res.json();
+        const err = res.data;
         alert(err.error || 'Failed to check out');
       }
     } catch (e) {

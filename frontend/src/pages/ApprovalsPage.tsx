@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
 import { useAuth } from '../contexts/AuthContext';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const ApprovalsPage: React.FC = () => {
     const { user } = useAuth();
@@ -12,11 +14,11 @@ const ApprovalsPage: React.FC = () => {
     const fetchTasks = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:6969/api/tasks/unapproved`, {
+            const res = await axios(`${API_URL}/tasks/unapproved`, { validateStatus: () => true, 
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (res.ok) {
-                const data = await res.json();
+            if ((res.status >= 200 && res.status < 300)) {
+                const data = res.data;
                 setTasks(data);
             }
         } catch (e) {
@@ -27,11 +29,11 @@ const ApprovalsPage: React.FC = () => {
     const fetchLeaves = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:6969/api/leaves?status=PENDING`, {
+            const res = await axios(`${API_URL}/leaves?status=PENDING`, { validateStatus: () => true, 
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (res.ok) {
-                const data = await res.json();
+            if ((res.status >= 200 && res.status < 300)) {
+                const data = res.data;
                 setLeaves(data);
             }
         } catch (e) {
@@ -55,7 +57,7 @@ const ApprovalsPage: React.FC = () => {
     const approveTask = async (taskId: string) => {
         try {
             const token = localStorage.getItem('token');
-            await fetch(`http://localhost:6969/api/tasks/${taskId}/approve`, {
+            await axios(`${API_URL}/tasks/${taskId}/approve`, { validateStatus: () => true, 
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -68,13 +70,13 @@ const ApprovalsPage: React.FC = () => {
     const approveLeave = async (leaveId: string, status: 'APPROVED' | 'REJECTED') => {
         try {
             const token = localStorage.getItem('token');
-            await fetch(`http://localhost:6969/api/leaves/${leaveId}/status`, {
+            await axios(`${API_URL}/leaves/${leaveId}/status`, { validateStatus: () => true, 
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({ status })
+                data: JSON.stringify({ status })
             });
             fetchLeaves();
         } catch (e) {

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 interface RequestLeaveModalProps {
     isOpen: boolean;
@@ -31,16 +33,16 @@ const RequestLeaveModal: React.FC<RequestLeaveModalProps> = ({ isOpen, onClose, 
                 return;
             }
 
-            const res = await fetch('http://localhost:6969/api/leaves', {
+            const res = await axios(`${API_URL}/leaves`, { validateStatus: () => true, 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                data: JSON.stringify(formData)
             });
 
-            if (!res.ok) {
+            if (!(res.status >= 200 && res.status < 300)) {
                 throw new Error('Failed to submit leave request');
             }
 

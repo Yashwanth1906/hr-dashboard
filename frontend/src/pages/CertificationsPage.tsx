@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
 import CertificationModal from '../components/CertificationModal';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const CertificationsPage: React.FC = () => {
   const [certifications, setCertifications] = useState<any[]>([]);
@@ -12,11 +14,11 @@ const CertificationsPage: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:6969/api/certifications?limit=100', {
+      const res = await axios(`${API_URL}/certifications?limit=100`, { validateStatus: () => true, 
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
-        const data = await res.json();
+      if ((res.status >= 200 && res.status < 300)) {
+        const data = res.data;
         setCertifications(data.certifications);
       }
     } catch (e) {
@@ -29,11 +31,11 @@ const CertificationsPage: React.FC = () => {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:6969/api/employees', {
+      const res = await axios(`${API_URL}/employees`, { validateStatus: () => true, 
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
-        const data = await res.json();
+      if ((res.status >= 200 && res.status < 300)) {
+        const data = res.data;
         setEmployees(data.employees || data);
       }
     } catch (e) {

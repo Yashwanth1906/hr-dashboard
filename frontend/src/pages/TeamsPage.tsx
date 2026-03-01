@@ -4,6 +4,8 @@ import { mockTeams, mockAttendance, mockCertifications, mockEmployeeAnalytics, m
 import { Team, User, Employee } from '../types';
 import { mockEmployees } from '../lib/mock-data';
 import { useAuth } from '../contexts/AuthContext';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const TeamsPage: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -26,10 +28,10 @@ const TeamsPage: React.FC = () => {
   const fetchTeams = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:6969/api/teams`, {
+      const res = await axios(`${API_URL}/teams`, { validateStatus: () => true, 
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
+      const data = res.data;
       setTeams(data);
     } catch (e) {
       console.error(e);
@@ -39,10 +41,10 @@ const TeamsPage: React.FC = () => {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:6969/api/employees`, {
+      const res = await axios(`${API_URL}/employees`, { validateStatus: () => true, 
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
+      const data = res.data;
       setEmployees(data);
     } catch (e) {
       console.error(e);
@@ -62,11 +64,11 @@ const TeamsPage: React.FC = () => {
         try {
           setIsLoadingDetails(true);
           const token = localStorage.getItem('token');
-          const res = await fetch(`http://localhost:6969/api/employees/getDetails/${selectedMember.id}`, {
+          const res = await axios(`${API_URL}/employees/getDetails/${selectedMember.id}`, { validateStatus: () => true, 
             headers: { Authorization: `Bearer ${token}` }
           });
-          if (res.ok) {
-            const data = await res.json();
+          if ((res.status >= 200 && res.status < 300)) {
+            const data = res.data;
             setMemberDetails(data);
           }
         } catch (e) {
@@ -85,20 +87,20 @@ const TeamsPage: React.FC = () => {
     try {
       if (!newTeam.name) return;
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:6969/api/teams`, {
+      const res = await axios(`${API_URL}/teams`, { validateStatus: () => true, 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(newTeam)
+        data: JSON.stringify(newTeam)
       });
-      if (res.ok) {
+      if ((res.status >= 200 && res.status < 300)) {
         setShowCreateModal(false);
         setNewTeam({ name: '', description: '', productName: '', managerIds: [] });
         fetchTeams();
       } else {
-        const errorData = await res.json();
+        const errorData = res.data;
         console.error('Error creating team:', errorData);
       }
     } catch (e) {

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import LogoutModal from './LogoutModal';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -17,11 +19,11 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     const fetchBranches = async () => {
       try {
-        const res = await fetch(`http://localhost:6969/api/companyBranches`, {
+        const res = await axios(`${API_URL}/companyBranches`, { validateStatus: () => true, 
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) {
-          setBranches(await res.json());
+        if ((res.status >= 200 && res.status < 300)) {
+          setBranches(res.data);
         }
       } catch (e) {
         console.error(e);
@@ -33,13 +35,13 @@ const Navbar: React.FC = () => {
   const handleLogout = async (branchId: string, lat: number, lng: number, isWFH: boolean) => {
     try {
       // First attempt to physically check the user out before logging off globally
-      await fetch(`http://localhost:6969/api/attendance/checkout`, {
+      await axios(`${API_URL}/attendance/checkout`, { validateStatus: () => true, 
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ isWFH, companyBranchId: isWFH ? null : branchId, checkoutLat: lat, checkoutLng: lng })
+        data: JSON.stringify({ isWFH, companyBranchId: isWFH ? null : branchId, checkoutLat: lat, checkoutLng: lng })
       });
     } catch (e) {
       console.warn("Soft fail on checkout location record on exit.", e);

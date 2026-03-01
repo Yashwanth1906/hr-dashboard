@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const AnalyticsPage: React.FC = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -10,11 +12,11 @@ const AnalyticsPage: React.FC = () => {
     const fetchAnalytics = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:6969/api/analytics/tasks', {
+        const res = await axios(`${API_URL}/analytics/tasks`, { validateStatus: () => true, 
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) {
-          const data = await res.json();
+        if ((res.status >= 200 && res.status < 300)) {
+          const data = res.data;
           setTasks(data.tasks || []);
         }
       } catch (e) {

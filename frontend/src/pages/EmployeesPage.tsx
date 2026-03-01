@@ -3,6 +3,8 @@ import AppShell from '../components/AppShell';
 import CompletedTaskModal from '../components/CompletedTaskModal';
 import { mockAttendance, mockCertifications, mockEmployeeAnalytics, mockAIReviews, mockTasks } from '../lib/mock-data';
 import { Employee, Task } from '../types';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 const EmployeesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,11 +20,11 @@ const EmployeesPage: React.FC = () => {
     const fetchEmployees = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:6969/api/employees`, {
+        const res = await axios(`${API_URL}/employees`, { validateStatus: () => true, 
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) {
-          const data = await res.json();
+        if ((res.status >= 200 && res.status < 300)) {
+          const data = res.data;
           setEmployees(data);
         }
       } catch (e) {
@@ -39,11 +41,11 @@ const EmployeesPage: React.FC = () => {
           setIsLoadingDetails(true);
           const token = localStorage.getItem('token');
           const userId = selectedEmployee.user?.id || selectedEmployee.userId || selectedEmployee.id; // Natively resolve ID matching backend expectations
-          const res = await fetch(`http://localhost:6969/api/employees/getDetails/${userId}`, {
+          const res = await axios(`${API_URL}/employees/getDetails/${userId}`, { validateStatus: () => true, 
             headers: { Authorization: `Bearer ${token}` }
           });
-          if (res.ok) {
-            const data = await res.json();
+          if ((res.status >= 200 && res.status < 300)) {
+            const data = res.data;
             setEmployeeDetails(data);
           }
         } catch (e) {

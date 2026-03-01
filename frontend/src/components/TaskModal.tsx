@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Task, User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { mockUsers, mockEmployees } from '../lib/mock-data';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 interface TaskModalProps {
   task: Task | null;
@@ -59,10 +61,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
       const fetchTeams = async () => {
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`http://localhost:6969/api/teams`, {
+          const res = await axios(`${API_URL}/teams`, { validateStatus: () => true, 
             headers: { Authorization: `Bearer ${token}` }
           });
-          const data = await res.json();
+          const data = res.data;
           // Filter teams based on user role? For now, fetch all endpoints.
           setTeams(data);
           if (data.length > 0) {

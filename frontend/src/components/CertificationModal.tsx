@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { API_URL } from '../utils/utils';
+import axios from 'axios';
 
 interface CertificationModalProps {
     isOpen: boolean;
@@ -33,16 +35,16 @@ const CertificationModal: React.FC<CertificationModalProps> = ({ isOpen, onClose
                 const uploadData = new FormData();
                 uploadData.append('file', file);
 
-                const uploadRes = await fetch('http://localhost:6969/api/upload', {
+                const uploadRes = await axios(`${API_URL}/upload`, { validateStatus: () => true, 
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`
                     },
-                    body: uploadData
+                    data: uploadData
                 });
 
-                if (uploadRes.ok) {
-                    const uploadJson = await uploadRes.json();
+                if ((uploadRes.status >= 200 && uploadRes.status < 300)) {
+                    const uploadJson = uploadRes.data;
                     url = uploadJson.url;
                 } else {
                     throw new Error('Failed to upload file');
@@ -50,19 +52,19 @@ const CertificationModal: React.FC<CertificationModalProps> = ({ isOpen, onClose
             }
 
             // 2. Create Certification
-            const certRes = await fetch('http://localhost:6969/api/certifications', {
+            const certRes = await axios(`${API_URL}/certifications`, { validateStatus: () => true, 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({
+                data: JSON.stringify({
                     ...formData,
                     url
                 })
             });
 
-            if (!certRes.ok) {
+            if (!(certRes.status >= 200 && certRes.status < 300)) {
                 throw new Error('Failed to create certification');
             }
 
