@@ -148,7 +148,7 @@ export const getEmployeeAnalytics = async (req: any, res: any) => {
         let totalAttendance = 0;
         let presentAttendance = 0;
 
-        employees.forEach(emp => {
+        employees.forEach((emp: any) => {
             // Department stats
             const deptId = emp.departmentId;
             stats.byDepartment[deptId] = (stats.byDepartment[deptId] || 0) + 1;
@@ -176,7 +176,7 @@ export const getEmployeeAnalytics = async (req: any, res: any) => {
         stats.attendanceRate = totalAttendance > 0 ? (presentAttendance / totalAttendance) * 100 : 0;
 
         res.json({
-            employees: employees.map(e => ({
+            employees: employees.map((e: any) => ({
                 id: e.id,
                 name: `${e.user.firstName} ${e.user.lastName}`,
                 email: e.user.email,
@@ -229,8 +229,8 @@ export const getTaskAnalytics = async (req: any, res: any) => {
 
         // Calculate completion rate and overdue tasks
         const now = new Date();
-        const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
-        const overdueTasks = tasks.filter(t => t.dueDate && t.dueDate < now && t.status !== 'COMPLETED');
+        const completedTasks = tasks.filter((t: any) => t.status === 'COMPLETED');
+        const overdueTasks = tasks.filter((t: any) => t.dueDate && t.dueDate < now && t.status !== 'COMPLETED');
 
         const completionRate = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
 
@@ -238,13 +238,13 @@ export const getTaskAnalytics = async (req: any, res: any) => {
         const statusStats: Record<string, number> = {};
         const priorityStats: Record<string, number> = {};
 
-        stats.forEach(stat => {
+        stats.forEach((stat: any) => {
             statusStats[stat.status] = (statusStats[stat.status] || 0) + stat._count.id;
             priorityStats[stat.priority] = (priorityStats[stat.priority] || 0) + stat._count.id;
         });
 
         res.json({
-            tasks: tasks.map(t => ({
+            tasks: tasks.map((t: any) => ({
                 id: t.id,
                 title: t.title,
                 status: t.status,
@@ -299,9 +299,9 @@ export const getAttendanceAnalytics = async (req: any, res: any) => {
         // Calculate statistics
         const totalRecords = attendanceRecords.length;
 
-        const presentCount = attendanceRecords.filter((r) => r.checkIn).length;
-        const lateCount = attendanceRecords.filter((r) => r.isLate).length;
-        const absentCount = attendanceRecords.filter((r) => !r.checkIn).length;
+        const presentCount = attendanceRecords.filter((r: any) => r.checkIn).length;
+        const lateCount = attendanceRecords.filter((r: any) => r.isLate).length;
+        const absentCount = attendanceRecords.filter((r: any) => !r.checkIn).length;
 
         const attendanceRate = totalRecords > 0
             ? ((presentCount + lateCount) / totalRecords) * 100
@@ -309,7 +309,7 @@ export const getAttendanceAnalytics = async (req: any, res: any) => {
 
         // Get daily breakdown
         const dailyStats: Record<string, { present: number; absent: number; late: number }> = {};
-        attendanceRecords.forEach(record => {
+        attendanceRecords.forEach((record: any) => {
             const dateKey = record.date.toISOString().split('T')[0];
             if (!dailyStats[dateKey]) {
                 dailyStats[dateKey] = { present: 0, absent: 0, late: 0 };
@@ -320,7 +320,7 @@ export const getAttendanceAnalytics = async (req: any, res: any) => {
         });
 
         res.json({
-            attendance: attendanceRecords.map(a => ({
+            attendance: attendanceRecords.map((a: any) => ({
                 id: a.id,
                 employeeName: `${a.employee.user.firstName} ${a.employee.user.lastName}`,
                 date: a.date,
@@ -382,14 +382,14 @@ export const getLeaveAnalytics = async (req: any, res: any) => {
         const statusCounts: Record<string, number> = {};
         const typeCounts: Record<string, number> = {};
 
-        stats.forEach(stat => {
+        stats.forEach((stat: any) => {
             statusCounts[stat.status] = (statusCounts[stat.status] || 0) + stat._count.id;
             typeCounts[stat.type] = (typeCounts[stat.type] || 0) + stat._count.id;
         });
 
         // Calculate total leave days
         let totalLeaveDays = 0;
-        leaves.forEach(leave => {
+        leaves.forEach((leave: any) => {
             const days = Math.ceil(
                 (new Date(leave.endDate).getTime() - new Date(leave.startDate).getTime()) / (1000 * 60 * 60 * 24)
             ) + 1;
@@ -397,7 +397,7 @@ export const getLeaveAnalytics = async (req: any, res: any) => {
         });
 
         res.json({
-            leaves: leaves.map(l => ({
+            leaves: leaves.map((l: any) => ({
                 id: l.id,
                 employeeName: `${l.employee.user.firstName} ${l.employee.user.lastName}`,
                 type: l.type,

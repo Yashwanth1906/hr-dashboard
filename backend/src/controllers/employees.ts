@@ -228,8 +228,8 @@ export const getEmployeeeDetails = async (req: any, res: any) => {
         });
 
         const totalAttendance = attendance.length;
-        const totalLateDays = attendance.filter(thatDay => thatDay.isLate).length;
-        const totalHalfDay = attendance.filter(thatDay => thatDay.isHalfDay).length;
+        const totalLateDays = attendance.filter((thatDay: any) => thatDay.isLate).length;
+        const totalHalfDay = attendance.filter((thatDay: any) => thatDay.isHalfDay).length;
 
         const presentDays = totalAttendance - (totalLateDays + totalHalfDay);
         const attendanceRate = totalAttendance > 0 ? (presentDays / 30) * 100 : 0;

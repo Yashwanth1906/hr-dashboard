@@ -131,7 +131,7 @@ export const createLeave = async (req: any, res: any) => {
             // Avoid creating notifications if we don't have the model
             if ((prisma as any).notification) {
                 await (prisma as any).notification.createMany({
-                    data: hrUsers.map(hr => ({
+                    data: hrUsers.map((hr: any) => ({
                         userId: hr.id,
                         type: 'ANNOUNCEMENT',
                         title: 'New Leave Request',

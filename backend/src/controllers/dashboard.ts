@@ -76,18 +76,18 @@ export const getDashboardData = async (req: Request, res: Response) => {
             }
         });
 
-        const tasksByState = tasksByStateRaw.map(t => ({
+        const tasksByState = tasksByStateRaw.map((t: any) => ({
             state: t.status,
             count: t._count._all
         }));
 
-        const employeesPerDepartment = employeesPerDepartmentRaw.map(d => ({
+        const employeesPerDepartment = employeesPerDepartmentRaw.map((d: any) => ({
             department: d.name,
             count: d._count.employees
         }));
 
-        const attendanceLast7DaysMap = new Map(
-            attendanceLast7DaysRaw.map(a => [a.date.toISOString().split('T')[0], a._count.employeeId])
+        const attendanceLast7DaysMap = new Map<string, number>(
+            attendanceLast7DaysRaw.map((a: any) => [a.date.toISOString().split('T')[0], a._count.employeeId])
         );
 
         const attendanceTrendData = [];
@@ -106,7 +106,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
             });
         }
 
-        const recentTasks = recentTasksRaw.map(t => ({
+        const recentTasks = recentTasksRaw.map((t: any) => ({
             id: t.id,
             title: t.title,
             assigneeName: t.assignee ? `${t.assignee.user.firstName} ${t.assignee.user.lastName}` : "Unassigned",
