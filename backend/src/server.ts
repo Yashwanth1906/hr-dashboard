@@ -27,11 +27,9 @@ const PORT = process.env.PORT || 6969;
 
 // Middleware
 app.use(cors({
-  origin: [
-    "https://hr-dashboard-pi-nine.vercel.app",
-    "http://localhost:3000"
-  ],
-  credentials: true
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
 
