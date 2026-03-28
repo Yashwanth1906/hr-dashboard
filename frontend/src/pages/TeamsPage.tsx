@@ -423,7 +423,13 @@ const TeamsPage: React.FC = () => {
 
         {/* Teams Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {teams.map((team) => {
+          {teams.filter((team) => {
+            // Manager only sees teams they manage
+            if (currentUser?.role?.toLowerCase() === 'manager') {
+              return team.managers?.some((m: any) => m.user?.id === currentUser?.id || m.userId === currentUser?.id);
+            }
+            return true; // Admin/HR see all
+          }).map((team) => {
             const managers = team.managers || [];
             const members = team.members || [];
             return (

@@ -1,18 +1,24 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
-  requiredRoles?: string[];
+  roles?: string[]; // if set, only these roles see it. if unset, everyone sees it.
 }
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
+  const role = user?.role?.toLowerCase() || '';
+
+  // Employee: Dashboard, Tasks, Assigned, Approvals, Attendance, My Leaves, Certifications
+  // Manager: above + Teams, Employees (their teams only — filtered in page)
+  // Admin/HR: everything
   const navItems: NavItem[] = [
     {
       label: 'Dashboard',
@@ -44,6 +50,7 @@ const Sidebar: React.FC = () => {
     {
       label: 'Teams',
       path: '/teams',
+      roles: ['admin', 'hr', 'manager'],
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 12H9m4 8H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2z" />
@@ -53,6 +60,7 @@ const Sidebar: React.FC = () => {
     {
       label: 'Employees',
       path: '/employees',
+      roles: ['admin', 'hr', 'manager'],
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20a9 9 0 0118 0v2H6v-2z" />
@@ -62,7 +70,7 @@ const Sidebar: React.FC = () => {
     {
       label: 'Approvals',
       path: '/approvals',
-      requiredRoles: ['admin', 'manager', 'hr', 'ADMIN', 'MANAGER', 'HR'],
+      roles: ['admin', 'manager', 'hr'],
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -99,6 +107,7 @@ const Sidebar: React.FC = () => {
     {
       label: 'Analytics',
       path: '/analytics',
+      roles: ['admin', 'hr'],
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -140,8 +149,13 @@ const Sidebar: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const isVisible = (item: NavItem) => {
+    if (!item.roles) return true;
+    return item.roles.includes(role);
+  };
+
   return (
-    <aside className="w-64 bg-slate-800 text-white h-screen overflow-y-auto sticky top-0">
+    <aside className="w-64 bg-slate-800 text-white h-screen overflow-y-auto sticky top-0 flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-slate-700">
         <div className="flex items-center gap-2">
@@ -157,42 +171,31 @@ const Sidebar: React.FC = () => {
       {/* Main Navigation */}
       <nav className="p-4 flex-1">
         <div className="space-y-1 mb-8">
-          <p className="text-xs font-semibold text-slate-400 px-3 mb-3 uppercase tracking-wider">
-            Main
-          </p>
-          {navItems.map((item) => {
-            if (item.requiredRoles && user && !item.requiredRoles.includes(user.role?.toUpperCase()) && !item.requiredRoles.includes(user.role?.toLowerCase())) {
-              return null;
-            }
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive(item.path)
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-700'
-                  }`}
-              >
-                {item.icon}
-                <span className="text-sm font-medium">{item.label}</span>
-              </Link>
-            )
-          })}
+          <p className="text-xs font-semibold text-slate-400 px-3 mb-3 uppercase tracking-wider">Main</p>
+          {navItems.filter(isVisible).map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                isActive(item.path) ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              {item.icon}
+              <span className="text-sm font-medium">{item.label}</span>
+            </Link>
+          ))}
         </div>
 
         {/* Support Navigation */}
         <div className="space-y-1 border-t border-slate-700 pt-4">
-          <p className="text-xs font-semibold text-slate-400 px-3 mb-3 uppercase tracking-wider">
-            Support
-          </p>
+          <p className="text-xs font-semibold text-slate-400 px-3 mb-3 uppercase tracking-wider">Support</p>
           {supportItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive(item.path)
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-300 hover:bg-slate-700'
-                }`}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                isActive(item.path) ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-700'
+              }`}
             >
               {item.icon}
               <span className="text-sm font-medium">{item.label}</span>
@@ -201,12 +204,15 @@ const Sidebar: React.FC = () => {
         </div>
       </nav>
 
-      {/* User Info */}
+      {/* User Info — click to view own profile */}
       {user && (
-        <div className="p-4 border-t border-slate-700">
+        <div
+          className="p-4 border-t border-slate-700 cursor-pointer hover:bg-slate-700 transition"
+          onClick={() => navigate('/my-profile')}
+        >
           <div className="flex items-center gap-3">
             <img
-              src={user.avatar}
+              src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
               alt={user.name}
               className="w-10 h-10 rounded-full bg-slate-700"
             />
@@ -214,6 +220,9 @@ const Sidebar: React.FC = () => {
               <p className="text-sm font-medium text-white truncate">{user.name}</p>
               <p className="text-xs text-slate-400 truncate capitalize">{user.role}</p>
             </div>
+            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
         </div>
       )}

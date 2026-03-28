@@ -22,6 +22,7 @@ import SubmitFeaturePage from './pages/SubmitFeaturePage';
 import NotFoundPage from './pages/NotFoundPage';
 import ApprovalsPage from './pages/ApprovalsPage';
 import MyLeavesPage from './pages/MyLeavesPage';
+import MyProfilePage from './pages/MyProfilePage';
 
 function App() {
   return (
@@ -69,7 +70,7 @@ function App() {
             <Route
               path="/teams"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole={['admin', 'hr', 'manager']}>
                   <TeamsPage />
                 </ProtectedRoute>
               }
@@ -77,7 +78,7 @@ function App() {
             <Route
               path="/employees"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole={['admin', 'hr', 'manager']}>
                   <EmployeesPage />
                 </ProtectedRoute>
               }
@@ -109,8 +110,16 @@ function App() {
             <Route
               path="/analytics"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole={['admin', 'hr']}>
                   <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-profile"
+              element={
+                <ProtectedRoute>
+                  <MyProfilePage />
                 </ProtectedRoute>
               }
             />

@@ -21,6 +21,7 @@ import teamRoutes from './routes/team';
 import dashboardRoutes from './routes/dashboard';
 import companyBranchRoutes from './routes/companyBranch';
 import uploadRoutes from './routes/upload';
+import targetRoutes from './routes/targets';
 
 const app = express();
 const PORT = process.env.PORT || 6969;
@@ -29,8 +30,10 @@ const PORT = process.env.PORT || 6969;
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Disposition'],
 }));
+
 app.use(express.json());
 
 // Health check endpoint
@@ -54,6 +57,7 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/companyBranches', companyBranchRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/targets', targetRoutes);
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);

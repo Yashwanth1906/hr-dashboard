@@ -85,6 +85,12 @@ model Employee {
 
   managedTeams Team[] @relation("TeamManagers")
 
+  targets         Target[] @relation("EmployeeTargets")
+  createdTargets  Target[] @relation("CreatedTargets")
+
+  receivedRatings EmployeeRating[] @relation("RatedEmployee")
+  givenRatings    EmployeeRating[] @relation("RatingGivenBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -247,4 +253,64 @@ enum LeaveStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum TargetStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  REVIEWED
+}
+
+model Target {
+  id          String @id @default(uuid())
+
+  employeeId  String
+  employee    Employee @relation("EmployeeTargets", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   Employee @relation("CreatedTargets", fields: [createdById], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      TargetStatus @default(ASSIGNED)
+
+  evidenceUrl     String?
+  selfRating      Int?
+  selfDescription String?
+  completedAt     DateTime?
+
+  managerRating   Int?
+  managerFeedback String?
+  reviewedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("targets")
+}
+
+model EmployeeRating {
+  id          String @id @default(uuid())
+
+  employeeId  String
+  employee    Employee @relation("RatedEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  ratedById   String
+  ratedBy     Employee @relation("RatingGivenBy", fields: [ratedById], references: [id], onDelete: Cascade)
+
+  rating      Int
+  description String?
+  type        RatingType
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("employee_ratings")
+}
+
+enum RatingType {
+  SELF
+  MANAGER
 }

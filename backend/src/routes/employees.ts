@@ -14,6 +14,9 @@ const router = Router();
 // Get all employees
 router.get('/', authenticate, getAllEmployees);
 
+// Get detailed employee info (must be before /:id to avoid route conflict)
+router.get('/getDetails/:id', authenticate, getEmployeeeDetails);
+
 // Get employee by ID
 router.get('/:id', authenticate, getEmployeeById);
 
@@ -25,7 +28,5 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'HR']), updateEmployee);
 
 // Delete employee (admin only)
 router.delete('/:id', authenticate, authorize(['ADMIN']), deleteEmployee);
-
-router.get('/getDetails/:id', authenticate, getEmployeeeDetails);
 
 export default router;

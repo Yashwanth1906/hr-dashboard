@@ -124,3 +124,56 @@ export interface AIReview {
   strengths: string[];
   suggestions: string[];
 }
+
+export type TargetStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'REVIEWED';
+
+export interface Target {
+  id: string;
+  employeeId: string;
+  createdById: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  status: TargetStatus;
+  evidenceUrl?: string;
+  selfRating?: number;
+  selfDescription?: string;
+  completedAt?: string;
+  managerRating?: number;
+  managerFeedback?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  employee?: { user: { firstName: string; lastName: string; email?: string } };
+  createdBy?: { user: { firstName: string; lastName: string } };
+}
+
+export type RatingType = 'SELF' | 'MANAGER';
+
+export interface EmployeeRatingRecord {
+  id: string;
+  employeeId: string;
+  ratedById: string;
+  rating: number;
+  description?: string;
+  type: RatingType;
+  createdAt: string;
+  ratedBy?: { user: { firstName: string; lastName: string } };
+}
+
+export interface KpiBreakdown {
+  taskCompletionRate: number;
+  attendanceScore: number;
+  targetCompletionRate: number;
+  onTimeDeliveryRate: number;
+  certificationsScore: number;
+  managerTargetRating: number;
+}
+
+export interface KriBreakdown {
+  lateAttendanceRate: number;
+  missedTargetRate: number;
+  overdueTaskRate: number;
+  leaveFrequency: number;
+  incompleteTaskRate: number;
+}
